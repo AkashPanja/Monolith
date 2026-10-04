@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { mockApi } from "../api/mock";
-import type { Proposal, Position } from "../api/client";
-import { CountUp, inr } from "../components/CountUp";
+import { api } from "../api/mock";
+import type { Proposal } from "../api/client";
 
 /** Shared guided-empty + section header for stub pages. */
 export function PageHead({ title, sub }: { title: string; sub: string }) {
@@ -23,54 +22,9 @@ export function Empty({ glyph, what, next }: { glyph: string; what: string; next
   );
 }
 
-export function Home() {
-  const [pnl, setPnl] = useState({ gross: 0, charges: 0, net: 0 });
-  const [positions, setPositions] = useState<Position[]>([]);
-  useEffect(() => {
-    mockApi.getDayPnl().then(setPnl);
-    mockApi.getPositions().then(setPositions);
-  }, []);
-  return (
-    <>
-      <PageHead title="Home" sub="Today at a glance — P&L, positions, system state." />
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginBottom: 14 }}>
-        {[
-          ["Gross", pnl.gross, ""],
-          ["Charges", pnl.charges, ""],
-          ["Net P&L", pnl.net, pnl.net >= 0 ? "pos" : "neg"],
-        ].map(([label, v, cls]) => (
-          <div className="card lift" key={label as string}>
-            <h3>{label}</h3>
-            <div className={cls as string} style={{ fontSize: 24, fontWeight: 800 }}>
-              <CountUp value={v as number} format={inr} />
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="card">
-        <h3>Open positions</h3>
-        <p className="sub">MIS intraday · squared off 15:10</p>
-        <table className="dtable">
-          <thead><tr><th>Symbol</th><th>Qty</th><th>Avg</th><th>LTP</th><th style={{ textAlign: "right" }}>P&L</th></tr></thead>
-          <tbody>
-            {positions.map((p) => (
-              <tr key={p.symbol}>
-                <td><b>{p.symbol}</b></td>
-                <td className="num">{p.qty}</td><td className="num">{p.avgPrice.toFixed(1)}</td>
-                <td className="num">{p.ltp.toFixed(1)}</td>
-                <td className={`num ${p.pnl >= 0 ? "pos" : "neg"}`}>{p.pnl >= 0 ? "+" : ""}{p.pnl}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </>
-  );
-}
-
 export function Plan() {
   const [rows, setRows] = useState<Proposal[]>([]);
-  useEffect(() => { mockApi.getProposals().then(setRows); }, []);
+  useEffect(() => { api.getProposals().then(setRows).catch(() => {}); }, []);
   return (
     <>
       <PageHead title="Plan & Proposals" sub="08:30 plan · gate decisions with reasons." />

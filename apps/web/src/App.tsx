@@ -5,7 +5,8 @@ import { Login } from "./pages/Login";
 import { Forgot } from "./pages/Forgot";
 import { Setup } from "./pages/Setup";
 import { needsSetup } from "./setup/setupStore";
-import { Audit, Home, Journal, Performance, Plan, Reports, Risk, Settings, Trading } from "./pages/Pages";
+import { Audit, Journal, Performance, Plan, Reports, Risk, Settings, Trading } from "./pages/Pages";
+import { Dashboard } from "./pages/Dashboard";
 import type { JSX } from "react";
 
 function Guard({ children }: { children: JSX.Element }) {
@@ -28,7 +29,7 @@ export function App() {
           </Guard>
         }
       >
-        <Route index element={<Home />} />
+        <Route index element={<Dashboard />} />
         <Route path="plan" element={<Plan />} />
         <Route path="trading" element={<Trading />} />
         <Route path="journal" element={<Journal />} />
