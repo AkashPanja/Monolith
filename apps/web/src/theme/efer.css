@@ -24,9 +24,10 @@
   border-radius: 28px;
   display: grid;
   grid-template-columns: 220px 330px 1fr;
-  gap: 0;
+  gap: 14px;
   min-height: calc(100vh - 36px);
   margin: 18px;
+  padding: 14px;
   overflow: hidden;
 }
 
@@ -53,8 +54,19 @@
   font-size: 11px; font-weight: 700; border-radius: 7px; padding: 1px 7px;
 }
 
-.efer-mid { padding: 30px 22px; border-left: 1px solid var(--efer-line); border-right: 1px solid var(--efer-line); }
-.efer-main { background: var(--efer-card); border-radius: 0 28px 28px 0; padding: 30px 34px; overflow-y: auto; }
+.efer-mid {
+  padding: 30px 22px;
+  background: var(--efer-card);
+  border-radius: 28px;
+  box-shadow: var(--efer-shadow);
+}
+.efer-main {
+  background: var(--efer-card);
+  border-radius: 28px;
+  box-shadow: var(--efer-shadow);
+  padding: 30px 34px;
+  overflow-y: auto;
+}
 
 .efer-h { font-size: 21px; font-weight: 650; margin: 0; }
 .efer-sub { font-size: 13px; color: var(--efer-ink-2); }
