@@ -1,35 +1,35 @@
 import { useState, type CSSProperties } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AuthShell, authInput, authPrimary } from "../components/AuthShell";
+import { AuthShell, authInput, authLabel, authLink, authMuted, authPrimary } from "../components/AuthShell";
 import { completeSetup, skipSetup } from "../setup/setupStore";
 import { mockApi } from "../api/mock";
 
-const label: CSSProperties = { fontSize: 12.5, color: "#b9b4d0", display: "block", margin: "0 0 6px" };
 const row2: CSSProperties = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 };
 const back: CSSProperties = {
-  background: "none", border: "1px solid #3d3657", borderRadius: 9,
-  padding: "12px 18px", color: "#eceaf4", cursor: "pointer", fontSize: 14,
+  background: "none", border: "1px solid #2e2e2e", borderRadius: 8,
+  padding: "13px 18px", color: "#f5f5f4", cursor: "pointer", fontSize: 13.5, fontFamily: "inherit",
 };
-const skipLink: CSSProperties = {
-  display: "block", margin: "16px auto 0", background: "none", border: "none",
-  color: "#8f89a8", fontSize: 13, cursor: "pointer", textDecoration: "underline",
+const skipBtn: CSSProperties = {
+  display: "block", margin: "22px auto 0", background: "none", border: "none",
+  color: "#8a8a8a", fontSize: 12.5, cursor: "pointer", fontFamily: "inherit",
 };
-const steps = ["Create first user", "Email delivery", "Ready"];
+const steps = ["Account", "Email", "Ready"];
 
-function pwScore(pw: string): { label: string; color: string; width: string } {
-  let s = 0;
-  if (pw.length >= 8) s++;
-  if (pw.length >= 12) s++;
-  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) s++;
-  if (/\d/.test(pw)) s++;
-  if (/[^A-Za-z0-9]/.test(pw)) s++;
-  if (s <= 2) return { label: "Weak", color: "#f87171", width: "33%" };
-  if (s <= 3) return { label: "Fair", color: "#fbbf24", width: "60%" };
-  return { label: "Strong", color: "#34d399", width: "100%" };
+function Eye({ show, onToggle }: { show: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button" onClick={onToggle} aria-label={show ? "Hide" : "Show"}
+      style={{
+        position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
+        background: "none", border: "none", cursor: "pointer", color: "#6e6e6e", fontSize: 15, padding: 0,
+      }}
+    >
+      {show ? "◉" : "◎"}
+    </button>
+  );
 }
 
-/** WordPress-style first-run wizard. Every step skippable; finishing or
-    skipping lands on /login. Email step configures report/reset delivery. */
+/** First-run wizard in the reference style. Every step skippable. */
 export function Setup() {
   const nav = useNavigate();
   const [step, setStep] = useState(0);
@@ -37,10 +37,11 @@ export function Setup() {
   const [busy, setBusy] = useState(false);
   const [testOk, setTestOk] = useState("");
 
-  const [first, setFirst] = useState("");
-  const [last, setLast] = useState("");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [host, setHost] = useState("");
   const [port, setPort] = useState("587");
   const [smtpUser, setSmtpUser] = useState("");
@@ -51,16 +52,14 @@ export function Setup() {
     skipSetup();
     nav("/login");
   };
-
   const finish = () => {
     completeSetup({
-      username: first || "admin",
+      username: name || "admin",
       email,
       smtp: { host, port: Number(port) || 587, user: smtpUser, from: from || email },
     });
     nav("/login");
   };
-
   const testEmail = async () => {
     setBusy(true);
     setTestOk("");
@@ -75,25 +74,20 @@ export function Setup() {
     }
   };
 
-  const userOk = first.trim() !== "" && /.+@.+\..+/.test(email) && password.length >= 8;
-  const score = pwScore(password);
+  const emailOk = /.+@.+\..+/.test(email);
+  const pwOk = password.length >= 8 && /\d/.test(password) && /[^A-Za-z0-9]/.test(password);
+  const userOk = name.trim() !== "" && emailOk && pwOk && password === confirm;
 
   return (
-    <AuthShell
-      tagline={step === 0 ? ["Let's get you", "set up"] : step === 1 ? ["Where should", "reports go?"] : ["You're all", "set"]}
-      activeDot={step}
-    >
-      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+    <AuthShell tagline={["Set up Monolith,", "own every trade."]}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
         {steps.map((s, i) => (
-          <span
-            key={s}
-            style={{
-              fontSize: 11.5, padding: "4px 10px", borderRadius: 999,
-              background: i === step ? "rgba(108,92,231,.35)" : "transparent",
-              border: `1px solid ${i === step ? "#6c5ce7" : "#3d3657"}`,
-              color: i === step ? "#fff" : "#8f89a8",
-            }}
-          >
+          <span key={s} style={{
+            fontSize: 11, padding: "4px 11px", borderRadius: 999,
+            background: i === step ? "#2a2a2a" : "transparent",
+            border: `1px solid ${i === step ? "#c9d6a3" : "#2e2e2e"}`,
+            color: i === step ? "#e7e7e7" : "#8a8a8a",
+          }}>
             {i + 1}. {s}
           </span>
         ))}
@@ -101,118 +95,117 @@ export function Setup() {
 
       {step === 0 && (
         <>
-          <h1 style={{ margin: "0 0 6px", fontSize: 30, fontWeight: 700 }}>Create your account</h1>
-          <p style={{ margin: "0 0 24px", fontSize: 13.5, color: "#8f89a8" }}>
+          <h1 style={{ margin: "0 0 8px", fontSize: 19, fontWeight: 500 }}>Create your account</h1>
+          <p style={{ margin: "0 0 28px", fontSize: 12.5, color: "#8a8a8a", lineHeight: 1.6 }}>
             This creates the first (owner) user. Single-owner system — no roles to pick.
           </p>
-          <div style={{ ...row2, marginBottom: 14 }}>
+          <div style={{ marginBottom: 16 }}>
+            <label style={authLabel} htmlFor="su-name">Full name *</label>
+            <input id="su-name" style={authInput} value={name} placeholder="Andrew Thomas"
+              onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={authLabel} htmlFor="su-email">Email address *</label>
+            <input id="su-email" style={authInput} type="email" value={email}
+              placeholder="e.g. andrew@example.com" onChange={(e) => setEmail(e.target.value)} />
+          </div>
+          <div style={{ ...row2, marginBottom: 6 }}>
             <div>
-              <label style={label} htmlFor="su-first">First name</label>
-              <input id="su-first" style={authInput} value={first} onChange={(e) => setFirst(e.target.value)} placeholder="Ada" />
-            </div>
-            <div>
-              <label style={label} htmlFor="su-last">Last name</label>
-              <input id="su-last" style={authInput} value={last} onChange={(e) => setLast(e.target.value)} placeholder="Trader" />
-            </div>
-          </div>
-          <div style={{ marginBottom: 14 }}>
-            <label style={label} htmlFor="su-email">Email</label>
-            <input id="su-email" style={authInput} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
-          </div>
-          <div style={{ marginBottom: 8 }}>
-            <label style={label} htmlFor="su-pw">Password</label>
-            <input
-              id="su-pw" style={authInput} type="password" value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Min. 8 characters"
-            />
-          </div>
-          {password && (
-            <div style={{ marginBottom: 18 }}>
-              <div style={{ height: 5, borderRadius: 999, background: "#3d3657", overflow: "hidden" }}>
-                <div style={{ width: score.width, height: "100%", background: score.color }} />
+              <label style={authLabel} htmlFor="su-pw">Password</label>
+              <div style={{ position: "relative" }}>
+                <input id="su-pw" style={{ ...authInput, paddingRight: 40 }} type={showPw ? "text" : "password"}
+                  value={password} placeholder="••••••••••" onChange={(e) => setPassword(e.target.value)} />
+                <Eye show={showPw} onToggle={() => setShowPw((s) => !s)} />
               </div>
-              <div style={{ fontSize: 12, color: score.color, marginTop: 4 }}>{score.label}</div>
             </div>
-          )}
+            <div>
+              <label style={authLabel} htmlFor="su-confirm">Confirm password</label>
+              <input id="su-confirm" style={authInput} type="password" value={confirm}
+                placeholder="••••••••••" onChange={(e) => setConfirm(e.target.value)} />
+            </div>
+          </div>
+          <p style={{ color: "#6e6e6e", fontSize: 11, margin: "10px 0 22px", lineHeight: 1.6 }}>
+            Password must be at least 8 characters, including a number and a special character.
+            {confirm && password !== confirm && <span style={{ color: "#f87171" }}> Passwords don't match.</span>}
+          </p>
           <button style={{ ...authPrimary, opacity: userOk ? 1 : 0.55 }} disabled={!userOk} onClick={() => setStep(1)}>
-            Continue →
+            Continue
           </button>
-          <button style={skipLink} onClick={skip}>Skip setup for now</button>
+          <button style={skipBtn} onClick={skip}>Skip setup for now</button>
         </>
       )}
 
       {step === 1 && (
         <>
-          <h1 style={{ margin: "0 0 6px", fontSize: 30, fontWeight: 700 }}>Email delivery</h1>
-          <p style={{ margin: "0 0 24px", fontSize: 13.5, color: "#8f89a8" }}>
-            Used for EOD reports, password resets, and CRITICAL alerts. Gmail App Password works fine.
+          <h1 style={{ margin: "0 0 8px", fontSize: 19, fontWeight: 500 }}>Email delivery</h1>
+          <p style={{ margin: "0 0 28px", fontSize: 12.5, color: "#8a8a8a", lineHeight: 1.6 }}>
+            Used for EOD reports, password resets and CRITICAL alerts. Gmail App Password works fine.
           </p>
-          <div style={{ ...row2, marginBottom: 14 }}>
+          <div style={{ ...row2, marginBottom: 16 }}>
             <div>
-              <label style={label} htmlFor="se-host">SMTP host</label>
-              <input id="se-host" style={authInput} value={host} onChange={(e) => setHost(e.target.value)} placeholder="smtp.gmail.com" />
+              <label style={authLabel} htmlFor="se-host">SMTP host *</label>
+              <input id="se-host" style={authInput} value={host} placeholder="smtp.gmail.com"
+                onChange={(e) => setHost(e.target.value)} />
             </div>
             <div>
-              <label style={label} htmlFor="se-port">Port</label>
-              <input id="se-port" style={authInput} value={port} inputMode="numeric" onChange={(e) => setPort(e.target.value)} placeholder="587" />
+              <label style={authLabel} htmlFor="se-port">Port</label>
+              <input id="se-port" style={authInput} value={port} inputMode="numeric"
+                onChange={(e) => setPort(e.target.value)} />
             </div>
           </div>
-          <div style={{ marginBottom: 14 }}>
-            <label style={label} htmlFor="se-user">SMTP username</label>
-            <input id="se-user" style={authInput} value={smtpUser} onChange={(e) => setSmtpUser(e.target.value)} placeholder="you@example.com" />
+          <div style={{ ...row2, marginBottom: 16 }}>
+            <div>
+              <label style={authLabel} htmlFor="se-user">SMTP username</label>
+              <input id="se-user" style={authInput} value={smtpUser} placeholder="you@example.com"
+                onChange={(e) => setSmtpUser(e.target.value)} />
+            </div>
+            <div>
+              <label style={authLabel} htmlFor="se-from">From address</label>
+              <input id="se-from" style={authInput} value={from} placeholder={email || "reports@example.com"}
+                onChange={(e) => setFrom(e.target.value)} />
+            </div>
           </div>
-          <div style={{ marginBottom: 14 }}>
-            <label style={label} htmlFor="se-pass">SMTP password</label>
-            <input
-              id="se-pass" style={authInput} type="password" value={smtpPass}
-              onChange={(e) => setSmtpPass(e.target.value)} placeholder="App password"
-            />
+          <div style={{ marginBottom: 22 }}>
+            <label style={authLabel} htmlFor="se-pass">SMTP password</label>
+            <input id="se-pass" style={authInput} type="password" value={smtpPass}
+              placeholder="App password" onChange={(e) => setSmtpPass(e.target.value)} />
           </div>
-          <div style={{ marginBottom: 18 }}>
-            <label style={label} htmlFor="se-from">From address</label>
-            <input id="se-from" style={authInput} value={from} onChange={(e) => setFrom(e.target.value)} placeholder={email || "reports@example.com"} />
-          </div>
-          {err && <p style={{ color: "#f87171", fontSize: 13.5, margin: "0 0 12px" }}>{err}</p>}
-          {testOk && <p style={{ color: "#34d399", fontSize: 13.5, margin: "0 0 12px" }}>{testOk}</p>}
+          {err && <p style={{ color: "#f87171", fontSize: 12.5, margin: "0 0 14px" }}>{err}</p>}
+          {testOk && <p style={{ color: "#a3c585", fontSize: 12.5, margin: "0 0 14px" }}>{testOk}</p>}
           <div style={{ display: "flex", gap: 10 }}>
-            <button style={back} onClick={() => setStep(0)}>← Back</button>
-            <button
-              style={{ ...back, flex: 1, opacity: !host || busy ? 0.55 : 1 }}
-              disabled={!host || busy} onClick={testEmail}
-            >
-              {busy ? "Sending…" : "Send test email"}
+            <button style={back} onClick={() => setStep(0)}>Back</button>
+            <button style={{ ...back, flex: 1, opacity: !host || busy ? 0.55 : 1 }}
+              disabled={!host || busy} onClick={testEmail}>
+              {busy ? "Sending…" : "Test"}
             </button>
-            <button style={{ ...authPrimary, width: "auto", flex: 1 }} onClick={() => setStep(2)}>
-              Continue →
+            <button style={{ ...authPrimary, width: "auto", flex: 1.4 }} onClick={() => setStep(2)}>
+              Continue
             </button>
           </div>
-          <button style={skipLink} onClick={skip}>Skip this step</button>
+          <button style={skipBtn} onClick={skip}>Skip this step</button>
         </>
       )}
 
       {step === 2 && (
         <>
-          <h1 style={{ margin: "0 0 6px", fontSize: 30, fontWeight: 700 }}>Ready to trade</h1>
-          <p style={{ margin: "0 0 24px", fontSize: 13.5, color: "#8f89a8" }}>
-            {first || "Owner"} {email ? `(${email})` : ""} · {host ? `mail via ${host}` : "email skipped — configure later in Settings"}
+          <h1 style={{ margin: "0 0 8px", fontSize: 19, fontWeight: 500 }}>Ready to trade</h1>
+          <p style={{ margin: "0 0 28px", fontSize: 12.5, color: "#8a8a8a", lineHeight: 1.6 }}>
+            {name || "Owner"}{email ? ` · ${email}` : ""}{host ? ` · mail via ${host}` : " · email skipped, configure later in Settings"}
           </p>
-          <div
-            style={{
-              background: "rgba(108,92,231,.14)", border: "1px solid rgba(108,92,231,.45)",
-              borderRadius: 9, padding: "13px 14px", fontSize: 13.5, marginBottom: 18,
-            }}
-          >
+          <div style={{
+            background: "#141414", border: "1px solid #2e2e2e", borderRadius: 8,
+            padding: "14px", fontSize: 12.5, marginBottom: 22, lineHeight: 1.6, color: "#d4d4d4",
+          }}>
             Mode starts at <b>PAPER</b>. Live trading needs step-up auth + the promotion checklist.
           </div>
           <div style={{ display: "flex", gap: 10 }}>
-            <button style={back} onClick={() => setStep(1)}>← Back</button>
+            <button style={back} onClick={() => setStep(1)}>Back</button>
             <button style={{ ...authPrimary, width: "auto", flex: 1 }} onClick={finish}>
-              Finish → Sign in
+              Finish
             </button>
           </div>
-          <p style={{ fontSize: 12.5, color: "#8f89a8", marginTop: 14, textAlign: "center" }}>
-            Already have an account? <Link to="/login" style={{ color: "#a78bfa" }}>Sign in</Link>
+          <p style={{ ...authMuted, textAlign: "center", margin: "26px 0 0" }}>
+            Already have an account? <Link to="/login" style={authLink}>Sign in</Link>
           </p>
         </>
       )}

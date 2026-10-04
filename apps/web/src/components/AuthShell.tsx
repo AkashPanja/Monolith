@@ -1,111 +1,119 @@
 import type { CSSProperties, ReactNode } from "react";
-import { MarketVisual } from "./MarketVisual";
+import { ArchVisual } from "./ArchVisual";
 
-/* Dark auth card: muted mauve backdrop, deep-navy card, market-visual
-   panel left (brand + live chart + tagline + dots), form panel right. */
+/* Auth card matching the reference exactly: sage-grey page backdrop,
+   pure-black rounded card, photographic panel left with bottom overlay
+   tagline, form column right. Inter throughout. */
 
 const backdrop: CSSProperties = {
   minHeight: "100%",
   display: "grid",
   placeItems: "center",
-  padding: 24,
-  background: "radial-gradient(1200px 700px at 50% 120%, #57506f 0%, #6f6a86 55%, #7b7590 100%)",
+  padding: 40,
+  background: "#9aa092",
+  fontFamily: "'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif",
 };
 
 const card: CSSProperties = {
   width: "100%",
-  maxWidth: 1020,
-  background: "#201c30",
-  border: "1px solid rgba(255,255,255,.06)",
-  borderRadius: 20,
-  boxShadow: "0 30px 80px -20px rgba(0,0,0,.55)",
-  display: "grid",
-  gridTemplateColumns: "1.1fr 1fr",
+  maxWidth: 1080,
+  background: "#000000",
+  borderRadius: 18,
   overflow: "hidden",
-  color: "#eceaf4",
+  display: "grid",
+  gridTemplateColumns: "1.02fr 1fr",
+  color: "#f5f5f4",
+  boxShadow: "0 40px 90px -30px rgba(0,0,0,.5)",
 };
 
 const visual: CSSProperties = {
-  margin: 12,
-  borderRadius: 14,
-  padding: "26px 26px 22px",
-  display: "flex",
-  flexDirection: "column",
-  background:
-    "radial-gradient(120% 90% at 80% 0%, rgba(124,93,250,.5) 0%, transparent 55%)," +
-    "radial-gradient(90% 70% at 15% 90%, rgba(16,185,129,.14) 0%, transparent 60%)," +
-    "linear-gradient(180deg, #342a5e 0%, #241d44 45%, #171222 100%)",
-  position: "relative",
+  margin: 10,
+  borderRadius: 12,
   overflow: "hidden",
+  position: "relative",
+  minHeight: 560,
+};
+
+const overlay: CSSProperties = {
+  position: "absolute",
+  left: 0,
+  right: 0,
+  bottom: 0,
+  padding: "90px 34px 30px",
+  background: "linear-gradient(180deg, transparent 0%, rgba(0,0,0,.55) 60%, rgba(0,0,0,.78) 100%)",
+  textAlign: "center",
+};
+
+export const authLabel: CSSProperties = {
+  fontSize: 12,
+  fontWeight: 500,
+  color: "#d4d4d4",
+  display: "block",
+  margin: "0 0 7px",
 };
 
 export const authInput: CSSProperties = {
   width: "100%",
-  background: "#2c2742",
-  border: "1px solid #3d3657",
-  borderRadius: 9,
-  padding: "12px 13px",
-  fontSize: 14,
-  color: "#eceaf4",
+  background: "#161616",
+  border: "1px solid #161616",
+  borderRadius: 8,
+  padding: "12px 14px",
+  fontSize: 13.5,
+  color: "#f5f5f4",
   outline: "none",
+  fontFamily: "inherit",
 };
 
 export const authPrimary: CSSProperties = {
   width: "100%",
-  background: "linear-gradient(180deg, #7c6cf5 0%, #6c5ce7 100%)",
+  background: "#c9d6a3",
   border: "none",
-  borderRadius: 9,
-  padding: 13,
-  fontSize: 14.5,
-  fontWeight: 700,
-  color: "#fff",
+  borderRadius: 8,
+  padding: 14,
+  fontSize: 13.5,
+  fontWeight: 600,
+  color: "#1c1c1a",
   cursor: "pointer",
-  boxShadow: "0 10px 24px -10px rgba(108,92,231,.7)",
+  fontFamily: "inherit",
 };
+
+export const authLink: CSSProperties = { color: "#e7e7e7", fontSize: 12.5, textDecoration: "none" };
+export const authMuted: CSSProperties = { color: "#8a8a8a", fontSize: 12.5 };
 
 export function AuthShell({
   tagline,
-  activeDot = 0,
   children,
 }: {
   tagline: [string, string];
-  activeDot?: number;
   children: ReactNode;
 }) {
   return (
     <div style={backdrop}>
-      <style>{`@media (max-width: 880px) { .auth-card { grid-template-columns: 1fr !important; } .auth-visual { display: none; } }`}</style>
+      <style>{`
+        @media (max-width: 880px) { .auth-card { grid-template-columns: 1fr !important; } .auth-visual { display: none; } }
+        .auth-card input:focus { border-color: #d6d6d6 !important; box-shadow: 0 0 0 1px #d6d6d6; }
+        .auth-card input::placeholder { color: #6e6e6e; }
+      `}</style>
       <div style={card} className="auth-card">
         <div style={visual} className="auth-visual">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-            <span style={{ fontWeight: 800, letterSpacing: ".14em", fontSize: 17 }}>◆ MONOLITH</span>
-            <span
-              style={{
-                fontSize: 12, border: "1px solid rgba(255,255,255,.35)",
-                borderRadius: 999, padding: "5px 12px", opacity: 0.9,
-              }}
-            >
-              Paper-first trading →
-            </span>
+          <div style={{ position: "absolute", inset: 0 }}>
+            <ArchVisual />
           </div>
-          <MarketVisual />
-          <div style={{ textAlign: "center", fontSize: 21, fontWeight: 650, lineHeight: 1.35, marginTop: 18 }}>
-            {tagline[0]},<br />{tagline[1]}
-          </div>
-          <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 18 }}>
-            {[0, 1, 2].map((i) => (
-              <span
-                key={i}
-                style={{
-                  width: i === activeDot ? 34 : 22, height: 5, borderRadius: 999,
-                  background: i === activeDot ? "#fff" : "rgba(255,255,255,.3)",
-                  transition: "width .25s",
-                }}
-              />
-            ))}
+          <div style={overlay}>
+            <div style={{ fontSize: 16.5, fontWeight: 500, lineHeight: 1.5 }}>{tagline[0]}</div>
+            <div style={{ fontSize: 16.5, fontWeight: 500, lineHeight: 1.5 }}>{tagline[1]}</div>
           </div>
         </div>
-        <div style={{ padding: "48px 52px" }}>{children}</div>
+        <div
+          style={{
+            padding: "64px 72px",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+          }}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );
