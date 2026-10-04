@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { mockApi } from "../api/mock";
+import { api } from "../api/mock";
 import type { Health, HealthStatus, LimitMeter, Mode } from "../api/client";
 import { ConfirmDanger, ModeBadge } from "../components/Chrome";
 import { CountUp, inr } from "../components/CountUp";
@@ -33,10 +33,10 @@ export function Shell() {
   const [killOpen, setKillOpen] = useState(false);
 
   useEffect(() => {
-    mockApi.getMode().then(setMode);
-    mockApi.getHealth().then(setHealth);
-    mockApi.getDayPnl().then(setPnl);
-    mockApi.getLimits().then(setLimits);
+    api.getMode().then(setMode);
+    api.getHealth().then(setHealth);
+    api.getDayPnl().then(setPnl);
+    api.getLimits().then(setLimits);
   }, []);
 
   const live = mode === "LIVE_CONFIRM" || mode === "LIVE_AUTO";
@@ -145,7 +145,7 @@ export function Shell() {
           expectPhrase="HALT ALL"
           onClose={() => setKillOpen(false)}
           onConfirm={async () => {
-            await mockApi.kill("dashboard kill");
+            await api.kill("dashboard kill", "HALT ALL");
             setMode("OFF");
           }}
         />

@@ -1,6 +1,7 @@
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthShell, authInput, authLabel, authLink, authMuted, authPrimary } from "../components/AuthShell";
+import { api, isLive } from "../api/mock";
 import { completeSetup, skipSetup } from "../setup/setupStore";
 import { mockApi } from "../api/mock";
 
@@ -47,18 +48,47 @@ export function Setup() {
   const [smtpUser, setSmtpUser] = useState("");
   const [smtpPass, setSmtpPass] = useState("");
   const [from, setFrom] = useState("");
+  const [totpSecret, setTotpSecret] = useState("");
+
+  useEffect(() => {
+    if (isLive()) {
+      api.setupStatus().then((s) => {
+        if (s.done) nav("/login");
+      }).catch(() => {});
+    }
+  }, [nav]);
 
   const skip = () => {
     skipSetup();
     nav("/login");
   };
-  const finish = () => {
-    completeSetup({
-      username: name || "admin",
-      email,
-      smtp: { host, port: Number(port) || 587, user: smtpUser, from: from || email },
-    });
-    nav("/login");
+  const finish = async () => {
+    setErr("");
+    setBusy(true);
+    try {
+      const r = await api.createFirstUser({
+        username: name || "admin",
+        email,
+        password,
+        smtp: { host, port: Number(port) || 587, user: smtpUser, from: from || email },
+      });
+      completeSetup({
+        username: name || "admin",
+        email,
+        smtp: { host, port: Number(port) || 587, user: smtpUser, from: from || email },
+      });
+      if (isLive()) {
+        // Server enrolled the authenticator secret: show it ONCE, then login.
+        setTotpSecret(r.totpSecret);
+        setStep(3);
+      } else {
+        nav("/login");
+      }
+    } catch (ex) {
+      setErr(ex instanceof Error ? ex.message : "Setup failed.");
+    } finally {
+      setBusy(false);
+    }
   };
   const testEmail = async () => {
     setBusy(true);
@@ -200,13 +230,33 @@ export function Setup() {
           </div>
           <div style={{ display: "flex", gap: 10 }}>
             <button style={back} onClick={() => setStep(1)}>Back</button>
-            <button style={{ ...authPrimary, width: "auto", flex: 1 }} onClick={finish}>
-              Finish
+            <button style={{ ...authPrimary, width: "auto", flex: 1 }} onClick={finish} disabled={busy}>
+              {busy ? "Creating…" : "Finish"}
             </button>
           </div>
+          {err && step === 2 && <p style={{ color: "#f87171", fontSize: 12.5, margin: "14px 0 0" }}>{err}</p>}
           <p style={{ ...authMuted, textAlign: "center", margin: "26px 0 0" }}>
             Already have an account? <Link to="/login" style={authLink}>Sign in</Link>
           </p>
+        </>
+      )}
+
+      {step === 3 && (
+        <>
+          <h1 style={{ margin: "0 0 8px", fontSize: 19, fontWeight: 500 }}>Save your authenticator secret</h1>
+          <p style={{ margin: "0 0 28px", fontSize: 12.5, color: "#8a8a8a", lineHeight: 1.6 }}>
+            Shown once. Add it to your authenticator app now — login requires a TOTP code every time.
+          </p>
+          <div style={{
+            background: "#141414", border: "1px dashed #c9d6a3", borderRadius: 8,
+            padding: "16px", fontSize: 17, letterSpacing: "0.12em", textAlign: "center",
+            marginBottom: 22, userSelect: "all",
+          }}>
+            {totpSecret}
+          </div>
+          <button style={authPrimary} onClick={() => nav("/login")}>
+            Saved — Sign in
+          </button>
         </>
       )}
     </AuthShell>

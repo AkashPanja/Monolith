@@ -42,7 +42,12 @@ export interface ApiClient {
   getLimits(): Promise<LimitMeter[]>;
   getPositions(): Promise<Position[]>;
   getProposals(): Promise<Proposal[]>;
-  kill(reason: string): Promise<void>;
+  kill(reason: string, phrase: string): Promise<void>;
   requestPasswordReset(email: string): Promise<void>;
   sendTestEmail(cfg: { host: string; port: number; from: string; to: string }): Promise<void>;
+  setupStatus(): Promise<{ done: boolean }>;
+  createFirstUser(data: {
+    username: string; email: string; password: string;
+    smtp: { host: string; port: number; user: string; from: string };
+  }): Promise<{ totpSecret: string }>;
 }

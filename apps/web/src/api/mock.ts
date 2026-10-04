@@ -1,4 +1,5 @@
 import type { ApiClient } from "./client";
+import { isLive, liveApi } from "./live";
 
 /* Fixture-backed client. Replace with fetch() calls when services/api lands. */
 
@@ -48,7 +49,7 @@ export const mockApi: ApiClient = {
       },
     ];
   },
-  async kill(reason) {
+  async kill(reason, _phrase) {
     await wait(300);
     if (!reason) throw new Error("Reason required.");
   },
@@ -61,7 +62,18 @@ export const mockApi: ApiClient = {
     if (!cfg.host) throw new Error("SMTP host is required.");
     if (!cfg.to || !/.+@.+\..+/.test(cfg.to)) throw new Error("Create the user first so we know where to send the test.");
   },
+  async setupStatus() {
+    return { done: localStorage.getItem("monolith_setup_done") === "1" };
+  },
+  async createFirstUser(data: {
+    username: string; email: string; password: string;
+    smtp: { host: string; port: number; user: string; from: string };
+  }) {
+    localStorage.setItem("monolith_setup_done", "1");
+    localStorage.setItem("monolith_setup_data", JSON.stringify({ ...data, password: undefined }));
+    return { totpSecret: "mock-enrolled-locally" };
+  },
 };
 
-export const api: ApiClient =
-  import.meta.env.VITE_API_MODE === "live" ? ({} as ApiClient) : mockApi; // live client lands with services/api
+export const api: ApiClient = isLive() ? liveApi : mockApi;
+export { isLive };
