@@ -1,5 +1,19 @@
 # UI Fix Pass — CHANGES.md
 
+## Follow-up: layout revert (eferbarn 3-column restored)
+
+The spec's TopBar + collapsible-rail apparatus clashed with the 3-column
+shell (duplicate headings, mixed radii, cramped bar), so the *layout* part
+was reverted to the plain eferbarn 3-column: nav | positions column | main.
+`ui/TopBar.tsx` and `ui/Kill.tsx` were deleted. Kept from the spec pass
+because they are strictly better and theme-consistent: `Money`/`fmt`,
+single `ModeBadge` (+ LIVE root frame), linear `RiskMeter`, `PnLCard`,
+`PositionRow`/`PositionsList`, explained nav badges, unique icons,
+accessible `Tabs`, `EmptyState` family, and all auth improvements
+(`Stepper`, `PasswordField`/`PasswordRules`, contrast, DEV-only skip).
+KILL is a native dialog with the true consequences plus the typed
+"HALT ALL" phrase the API already requires; Logout sits well away from it.
+
 Spec: Claude UI design review (`muse-monolith-ui-spec.md`). Presentation layer
 only: no route, API, risk-engine or state-management changes. All figures come
 from existing endpoints; nothing was invented.

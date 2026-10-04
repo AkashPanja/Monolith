@@ -87,6 +87,12 @@
   font-size: 12.5px; font-weight: 600; padding: 7px 14px; cursor: pointer; color: var(--efer-ink);
   font-family: inherit;
 }
+.efer-kill {
+  border: none; border-radius: 10px; padding: 12px 0;
+  background: #2b2b4a; color: #fff; font-weight: 700; cursor: pointer;
+  font-family: inherit; font-size: 13.5px;
+}
+.efer-kill:hover { background: #1d1d33; }
 
 .efer-tiles { display: flex; gap: 12px; margin-bottom: 26px; }
 .efer-tile {
@@ -117,11 +123,13 @@
 @media (max-width: 1100px) {
   .efer-shell { grid-template-columns: 200px 1fr; }
   .efer-mid { display: none; }
+  .efer-main { grid-column: 2; }
 }
 @media (max-width: 760px) {
   .efer-shell { grid-template-columns: 1fr; margin: 0; border-radius: 0; }
   .efer-nav { flex-direction: row; flex-wrap: wrap; align-items: center; }
-  .efer-main { border-radius: 0; }
+  .efer-main { border-radius: 0; grid-column: 1; }
+  .efer-mid { display: block; }
 }
 @media (prefers-reduced-motion: reduce) {
   .efer-link, .efer-tile { transition: none; }
@@ -344,13 +352,6 @@ dialog.kill-dialog .cancel { background: none; border: 1px solid var(--efer-line
 }
 
 /* RightRail */
-.right-rail { transition: margin 0.2s ease, opacity 0.2s ease; }
-.right-rail.closed { display: none; }
-@media (max-width: 1024px) {
-  .efer-shell { grid-template-columns: 200px 1fr; }
-  .right-rail.open { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 30;
-    max-height: 55vh; overflow-y: auto; }
-}
 @media (max-width: 760px) {
   .efer-shell { grid-template-columns: 1fr; margin: 0; border-radius: 0; padding: 10px; }
   .efer-nav { flex-direction: row; flex-wrap: wrap; align-items: center; }

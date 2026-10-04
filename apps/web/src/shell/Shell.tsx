@@ -1,26 +1,13 @@
-import { useCallback, useEffect, useState } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Outlet, useNavigate } from "react-router-dom";
 import { api } from "../api/mock";
 import type { LimitMeter, Mode } from "../api/client";
-import { isLiveMode } from "../components/ui/ModeBadge";
+import { ModeBadge, isLiveMode } from "../components/ui/ModeBadge";
 import { RiskMeter } from "../components/ui/RiskMeter";
-import { TopBar } from "../components/ui/TopBar";
 import { PnLCard, PositionsList } from "../components/efer/Blocks";
 import { SideNav, type NavEntry } from "../components/efer/SideNav";
 import { useAuth } from "../auth/AuthContext";
 import "../theme/efer.css";
-
-const TITLES: Record<string, string> = {
-  "/": "Overview",
-  "/plan": "Proposals",
-  "/trading": "Trading",
-  "/journal": "Journal",
-  "/performance": "My Stats",
-  "/reports": "Reports",
-  "/risk": "Risk & Limits",
-  "/settings": "Settings",
-  "/audit": "Audit & Health",
-};
 
 const NAV: NavEntry[] = [
   { to: "/", icon: "home", label: "Overview", end: true },
@@ -71,44 +58,23 @@ function useAsync<T>(fn: () => Promise<T>) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nonce]);
-  const retry = useCallback(() => setNonce((n) => n + 1), []);
+  const retry = () => setNonce((n) => n + 1);
   return { data, loading, error, retry };
 }
-
-function setupUsername(): string {
-  try {
-    const raw = localStorage.getItem("monolith_setup_data");
-    if (!raw) return "Owner";
-    const parsed = JSON.parse(raw) as { username?: string };
-    return parsed.username || "Owner";
-  } catch {
-    return "Owner";
-  }
-}
-
-const RAIL_KEY = "monolith.rail.open";
 
 export function Shell() {
   const { logout } = useAuth();
   const nav = useNavigate();
-  const location = useLocation();
-  const [railOpen, setRailOpen] = useState(() => localStorage.getItem(RAIL_KEY) !== "0");
-  const [healthAt, setHealthAt] = useState<number | null>(null);
+  const killRef = useRef<HTMLDialogElement>(null);
+  const [phrase, setPhrase] = useState("");
+  const [killErr, setKillErr] = useState("");
+  const [killBusy, setKillBusy] = useState(false);
 
   const modeQ = useAsync(() => api.getMode());
-  const healthQ = useAsync(() => api.getHealth());
   const pnlQ = useAsync(() => api.getDayPnl());
   const posQ = useAsync(() => api.getPositions());
   const limQ = useAsync(() => api.getLimits());
   const propQ = useAsync(() => api.getProposals());
-
-  useEffect(() => {
-    if (!healthQ.loading) setHealthAt(Date.now());
-  }, [healthQ.loading]);
-
-  useEffect(() => {
-    localStorage.setItem(RAIL_KEY, railOpen ? "1" : "0");
-  }, [railOpen]);
 
   const mode: Mode = modeQ.data ?? "PAPER";
   const live = isLiveMode(mode);
@@ -123,9 +89,24 @@ export function Shell() {
       : e
   );
 
-  const kill = async () => {
-    await api.kill("dashboard kill", "HALT ALL");
-    modeQ.retry();
+  const openKill = () => {
+    setPhrase("");
+    setKillErr("");
+    killRef.current?.showModal();
+  };
+  const confirmKill = async () => {
+    if (phrase.trim() !== "HALT ALL" || killBusy) return;
+    setKillBusy(true);
+    setKillErr("");
+    try {
+      await api.kill("dashboard kill", "HALT ALL");
+      killRef.current?.close();
+      modeQ.retry();
+    } catch (e) {
+      setKillErr(e instanceof Error ? e.message : "Kill failed.");
+    } finally {
+      setKillBusy(false);
+    }
   };
 
   return (
@@ -139,69 +120,110 @@ export function Shell() {
       <div className="efer-shell">
         <SideNav entries={navEntries} bottom={BOTTOM} brand="monolith" />
 
-        <aside
-          className={`efer-mid right-rail${railOpen ? " open" : " closed"}`}
-          aria-label="Positions and risk"
-          aria-hidden={!railOpen}
-        >
-          {railOpen && (
-            <>
-              <div className="efer-rowhead">
-                <h2 className="efer-h">Your positions</h2>
-              </div>
-              {pnlQ.data && (
-                <PnLCard
-                  net={pnlQ.data.net}
-                  gross={pnlQ.data.gross}
-                  charges={pnlQ.data.charges}
-                />
-              )}
-              <PositionsList
-                positions={posQ.data ?? []}
-                loading={posQ.loading}
-                error={posQ.error}
-                onRetry={posQ.retry}
-                emptyText="Approved proposals appear here once the worker runs."
-              />
-              <hr
-                style={{
-                  border: "none",
-                  borderTop: "1px solid var(--efer-line)",
-                  margin: "18px 0 8px",
-                }}
-              />
-              {(limQ.data ?? []).map((l: LimitMeter) => (
-                <RiskMeter
-                  key={l.name}
-                  label={l.name}
-                  pct={l.usedPct}
-                  help={RISK_HELP[l.name] ?? "Share of this limit in use"}
-                />
-              ))}
-            </>
+        <aside className="efer-mid" aria-label="Positions and risk">
+          <div className="efer-rowhead">
+            <h2 className="efer-h">Your positions</h2>
+          </div>
+          {pnlQ.data && (
+            <PnLCard
+              net={pnlQ.data.net}
+              gross={pnlQ.data.gross}
+              charges={pnlQ.data.charges}
+            />
           )}
+          <PositionsList
+            positions={posQ.data ?? []}
+            loading={posQ.loading}
+            error={posQ.error}
+            onRetry={posQ.retry}
+            emptyText="Approved proposals appear here once the worker runs."
+          />
+          <hr
+            style={{
+              border: "none",
+              borderTop: "1px solid var(--efer-line)",
+              margin: "18px 0 8px",
+            }}
+          />
+          {(limQ.data ?? []).map((l: LimitMeter) => (
+            <RiskMeter
+              key={l.name}
+              label={l.name}
+              pct={l.usedPct}
+              help={RISK_HELP[l.name] ?? "Share of this limit in use"}
+            />
+          ))}
+          <div style={{ marginTop: 16, display: "grid", gap: 8 }}>
+            <button onClick={openKill} className="efer-kill">
+              ⏻ KILL — halt everything
+            </button>
+            <button
+              onClick={() => {
+                logout();
+                nav("/login");
+              }}
+              className="efer-pill-btn"
+              style={{ padding: "11px 0" }}
+            >
+              Logout
+            </button>
+          </div>
+          <div style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>
+            <ModeBadge mode={mode} />
+          </div>
         </aside>
 
         <main className="efer-main">
-          <TopBar
-            title={TITLES[location.pathname] ?? "Overview"}
-            mode={mode}
-            brokerOk={healthQ.data?.broker === "ok"}
-            lastUpdated={healthAt}
-            onKillConfirm={kill}
-            onToggleRail={() => setRailOpen((o) => !o)}
-            railOpen={railOpen}
-            user={{ name: setupUsername() }}
-            onLogout={() => {
-              logout();
-              nav("/login");
-            }}
-          />
-          <div className="page" key={location.pathname}>
+          <div className="page" key={window.location.pathname}>
             <Outlet />
           </div>
         </main>
       </div>
+
+      <dialog ref={killRef} className="kill-dialog" aria-labelledby="kill-title">
+        <h2 id="kill-title">Activate kill switch?</h2>
+        <ul>
+          <li>Set trading mode to OFF — no new orders are placed</li>
+          <li>Flag the session as killed (resume needs step-up auth)</li>
+          <li>Open positions are NOT auto-squared by this action</li>
+        </ul>
+        <div className="field" style={{ marginTop: 14 }}>
+          <label htmlFor="kill-phrase">Type HALT ALL to confirm</label>
+          <input
+            id="kill-phrase"
+            value={phrase}
+            onChange={(e) => setPhrase(e.target.value)}
+            placeholder="HALT ALL"
+            autoComplete="off"
+            style={{
+              width: "100%",
+              border: "1px solid var(--efer-line)",
+              borderRadius: 10,
+              padding: "11px 12px",
+              fontSize: 14,
+              fontFamily: "inherit",
+            }}
+          />
+        </div>
+        {killErr && (
+          <p role="alert" style={{ color: "var(--danger)", fontSize: 13, margin: "0 0 6px" }}>
+            {killErr}
+          </p>
+        )}
+        <div className="row">
+          <button className="cancel" onClick={() => killRef.current?.close()}>
+            Cancel
+          </button>
+          <button
+            className="hold"
+            disabled={phrase.trim() !== "HALT ALL" || killBusy}
+            style={{ opacity: phrase.trim() !== "HALT ALL" || killBusy ? 0.5 : 1 }}
+            onClick={confirmKill}
+          >
+            {killBusy ? "Halting…" : "Confirm KILL"}
+          </button>
+        </div>
+      </dialog>
     </div>
   );
 }
@@ -217,5 +239,3 @@ export function PageHead({ title, sub, right }: { title: string; sub?: string; r
     </div>
   );
 }
-
-// PageHead stays here so page modules keep a single shell import site.

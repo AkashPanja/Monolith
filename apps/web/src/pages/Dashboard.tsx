@@ -74,7 +74,7 @@ export function Dashboard() {
           key={p.symbol}
           icon={p.pnl >= 0 ? "down" : "up"}
           title={`${p.symbol} × ${p.qty}`}
-          sub={p.pnl >= 0 ? "Holding" : "Holding"}
+          sub={`${p.qty} @ avg ${p.avgPrice.toFixed(2)}`}
           amount={`${p.pnl >= 0 ? "+" : ""}${p.pnl} INR`}
           down={p.pnl < 0}
         />
