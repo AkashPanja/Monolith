@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { api } from "../api/mock";
 import type { Position, Proposal } from "../api/client";
 import { PageHead } from "../shell/Shell";
-import { ActivityItem, MiniChart, inr0 } from "../components/efer/Blocks";
+import { ActivityItem, MiniChart } from "../components/efer/Blocks";
+import { fmtINR } from "../utils/fmt";
 import { E, eicons } from "../components/efer/eicons";
 
 const TILE_COLORS = ["#2b2b4a", "#6c5ce7", "#e05757", "#3fa66a"];
@@ -53,7 +54,7 @@ export function Dashboard() {
           position: "absolute", left: "18%", top: -8, background: "#2b2b4a", color: "#fff",
           fontSize: 12, fontWeight: 650, borderRadius: 8, padding: "4px 10px", zIndex: 1,
         }}>
-          {inr0(pnl.net).replace("₹", "").replace(/,/g, ",")},00
+          {fmtINR(pnl.net)}
         </span>
         <div style={{ paddingTop: 26 }}>
           <MiniChart points={curve} mark={3} />

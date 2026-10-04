@@ -1,48 +1,34 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AuthShell, authInput, authLabel, authLink, authMuted, authPrimary } from "../components/AuthShell";
+import { AuthShell } from "../components/AuthShell";
+import { Stepper } from "../components/auth/Stepper";
+import { PASSWORD_RULES, PasswordField, PasswordRules } from "../components/auth/password";
 import { api, isLive } from "../api/mock";
 import { completeSetup, skipSetup } from "../setup/setupStore";
 import { mockApi } from "../api/mock";
 
-const row2: CSSProperties = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 };
-const back: CSSProperties = {
-  background: "none", border: "1px solid #2e2e2e", borderRadius: 8,
-  padding: "13px 18px", color: "#f5f5f4", cursor: "pointer", fontSize: 13.5, fontFamily: "inherit",
-};
-const skipBtn: CSSProperties = {
-  display: "block", margin: "22px auto 0", background: "none", border: "none",
-  color: "#8a8a8a", fontSize: 12.5, cursor: "pointer", fontFamily: "inherit",
-};
-const steps = ["Account", "Email", "Ready"];
+const STEPS = [
+  { id: "account", label: "Account" },
+  { id: "email", label: "Email" },
+  { id: "ready", label: "Ready" },
+];
 
-function Eye({ show, onToggle }: { show: boolean; onToggle: () => void }) {
-  return (
-    <button
-      type="button" onClick={onToggle} aria-label={show ? "Hide" : "Show"}
-      style={{
-        position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
-        background: "none", border: "none", cursor: "pointer", color: "#6e6e6e", fontSize: 15, padding: 0,
-      }}
-    >
-      {show ? "◉" : "◎"}
-    </button>
-  );
-}
+const SHOW_SKIP = import.meta.env.DEV === true;
 
-/** First-run wizard in the reference style. Every step skippable. */
+/** First-run wizard. Skip is a dev-only escape hatch (hidden in production). */
 export function Setup() {
   const nav = useNavigate();
   const [step, setStep] = useState(0);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [testOk, setTestOk] = useState("");
+  const [blurred, setBlurred] = useState<Record<string, boolean>>({});
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [showPw, setShowPw] = useState(false);
+  const [reveal, setReveal] = useState(false);
   const [host, setHost] = useState("");
   const [port, setPort] = useState("587");
   const [smtpUser, setSmtpUser] = useState("");
@@ -57,6 +43,16 @@ export function Setup() {
       }).catch(() => {});
     }
   }, [nav]);
+
+  useEffect(() => {
+    if (isLive()) {
+      api.setupStatus().then((s) => {
+        if (s.done) nav("/login");
+      }).catch(() => {});
+    }
+  }, [nav]);
+
+  const blur = (k: string) => setBlurred((b) => ({ ...b, [k]: true }));
 
   const skip = () => {
     skipSetup();
@@ -105,156 +101,255 @@ export function Setup() {
   };
 
   const emailOk = /.+@.+\..+/.test(email);
-  const pwOk = password.length >= 8 && /\d/.test(password) && /[^A-Za-z0-9]/.test(password);
-  const userOk = name.trim() !== "" && emailOk && pwOk && password === confirm;
+  const rulesOk = PASSWORD_RULES.every((r) => r.test(password));
+  const match = password !== "" && password === confirm;
+  const userOk = name.trim() !== "" && emailOk && rulesOk && match;
+
+  const nameErr = blurred.name && name.trim() === "" ? "Enter your full name." : "";
+  const emailErr = blurred.email && !emailOk ? "Enter a valid email address." : "";
+  const confirmErr =
+    blurred.confirm && confirm !== "" && !match
+      ? "Passwords don't match."
+      : "";
+
+  const titles = ["Create your account", "Email delivery", "Ready to trade", "Save your authenticator secret"];
+  const subtitles = [
+    "This creates the first (owner) user. Single-owner system — no roles to pick.",
+    "Used for EOD reports, password resets and CRITICAL alerts. Gmail App Password works fine.",
+    undefined,
+    "Shown once. Add it to your authenticator app now — login requires a TOTP code every time.",
+  ];
 
   return (
-    <AuthShell tagline={["Set up Monolith,", "own every trade."]}>
-      <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-        {steps.map((s, i) => (
-          <span key={s} style={{
-            fontSize: 11, padding: "4px 11px", borderRadius: 999,
-            background: i === step ? "#2a2a2a" : "transparent",
-            border: `1px solid ${i === step ? "#c9d6a3" : "#2e2e2e"}`,
-            color: i === step ? "#e7e7e7" : "#8a8a8a",
-          }}>
-            {i + 1}. {s}
-          </span>
-        ))}
-      </div>
+    <AuthShell
+      steps={STEPS}
+      current={Math.min(step, 2)}
+      title={titles[Math.min(step, 3)]}
+      subtitle={subtitles[Math.min(step, 3)]}
+      asideCaption="Set up Monolith, own every trade."
+      footer={
+        step === 0 ? (
+          <p className="auth-hint" style={{ textAlign: "center", marginTop: 26 }}>
+            Already have an account? <Link to="/login" style={{ color: "#e7e7e7" }}>Sign in</Link>
+          </p>
+        ) : undefined
+      }
+    >
+      <Stepper steps={STEPS} current={Math.min(step, 2)} />
 
       {step === 0 && (
-        <>
-          <h1 style={{ margin: "0 0 8px", fontSize: 19, fontWeight: 500 }}>Create your account</h1>
-          <p style={{ margin: "0 0 28px", fontSize: 12.5, color: "#8a8a8a", lineHeight: 1.6 }}>
-            This creates the first (owner) user. Single-owner system — no roles to pick.
-          </p>
-          <div style={{ marginBottom: 16 }}>
-            <label style={authLabel} htmlFor="su-name">Full name *</label>
-            <input id="su-name" style={authInput} value={name} placeholder="Andrew Thomas"
-              onChange={(e) => setName(e.target.value)} />
+        <form
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            setBlurred({ name: true, email: true, confirm: true });
+            if (userOk) setStep(1);
+          }}
+        >
+          <div className="field">
+            <label htmlFor="su-name">Full name</label>
+            <input
+              id="su-name"
+              value={name}
+              autoComplete="name"
+              aria-invalid={!!nameErr}
+              aria-describedby={nameErr ? "su-name-err" : undefined}
+              onChange={(e) => setName(e.target.value)}
+              onBlur={() => blur("name")}
+            />
+            {nameErr && (
+              <p role="alert" id="su-name-err" className="field-error">
+                {nameErr}
+              </p>
+            )}
           </div>
-          <div style={{ marginBottom: 16 }}>
-            <label style={authLabel} htmlFor="su-email">Email address *</label>
-            <input id="su-email" style={authInput} type="email" value={email}
-              placeholder="e.g. andrew@example.com" onChange={(e) => setEmail(e.target.value)} />
+          <div className="field">
+            <label htmlFor="su-email">Email address</label>
+            <input
+              id="su-email"
+              type="email"
+              value={email}
+              autoComplete="email"
+              aria-invalid={!!emailErr}
+              aria-describedby={emailErr ? "su-email-err" : undefined}
+              onChange={(e) => setEmail(e.target.value)}
+              onBlur={() => blur("email")}
+            />
+            {emailErr && (
+              <p role="alert" id="su-email-err" className="field-error">
+                {emailErr}
+              </p>
+            )}
           </div>
-          <div style={{ ...row2, marginBottom: 6 }}>
-            <div>
-              <label style={authLabel} htmlFor="su-pw">Password</label>
-              <div style={{ position: "relative" }}>
-                <input id="su-pw" style={{ ...authInput, paddingRight: 40 }} type={showPw ? "text" : "password"}
-                  value={password} placeholder="••••••••••" onChange={(e) => setPassword(e.target.value)} />
-                <Eye show={showPw} onToggle={() => setShowPw((s) => !s)} />
-              </div>
-            </div>
-            <div>
-              <label style={authLabel} htmlFor="su-confirm">Confirm password</label>
-              <input id="su-confirm" style={authInput} type="password" value={confirm}
-                placeholder="••••••••••" onChange={(e) => setConfirm(e.target.value)} />
-            </div>
-          </div>
-          <p style={{ color: "#6e6e6e", fontSize: 11, margin: "10px 0 22px", lineHeight: 1.6 }}>
-            Password must be at least 8 characters, including a number and a special character.
-            {confirm && password !== confirm && <span style={{ color: "#f87171" }}> Passwords don't match.</span>}
-          </p>
-          <button style={{ ...authPrimary, opacity: userOk ? 1 : 0.55 }} disabled={!userOk} onClick={() => setStep(1)}>
+          <PasswordField
+            label="Password"
+            value={password}
+            onChange={setPassword}
+            reveal={reveal}
+            onToggleReveal={() => setReveal((r) => !r)}
+            autoComplete="new-password"
+            describedBy="pw-rules"
+          />
+          <PasswordField
+            label="Confirm password"
+            value={confirm}
+            onChange={setConfirm}
+            reveal={reveal}
+            onToggleReveal={() => setReveal((r) => !r)}
+            autoComplete="new-password"
+            error={confirmErr || undefined}
+            describedBy={confirmErr ? "su-confirm-err" : undefined}
+          />
+          {confirmErr && <span id="su-confirm-err" hidden />}
+          <PasswordRules value={password} />
+          {match && (
+            <p role="status" style={{ color: "var(--auth-accent)", fontSize: 12, margin: "-14px 0 18px" }}>
+              ✓ Passwords match
+            </p>
+          )}
+          <button
+            type="submit"
+            className="btn-auth"
+            aria-disabled={!userOk}
+            onClick={(e) => {
+              if (!userOk) e.preventDefault();
+            }}
+          >
             Continue
           </button>
-          <button style={skipBtn} onClick={skip}>Skip setup for now</button>
-        </>
+          {!userOk && <p className="auth-hint">Complete all fields to continue</p>}
+          {SHOW_SKIP && (
+            <button type="button" className="auth-skip" onClick={skip}>
+              Skip setup for now (dev only)
+            </button>
+          )}
+        </form>
       )}
 
       {step === 1 && (
         <>
-          <h1 style={{ margin: "0 0 8px", fontSize: 19, fontWeight: 500 }}>Email delivery</h1>
-          <p style={{ margin: "0 0 28px", fontSize: 12.5, color: "#8a8a8a", lineHeight: 1.6 }}>
-            Used for EOD reports, password resets and CRITICAL alerts. Gmail App Password works fine.
-          </p>
-          <div style={{ ...row2, marginBottom: 16 }}>
-            <div>
-              <label style={authLabel} htmlFor="se-host">SMTP host *</label>
-              <input id="se-host" style={authInput} value={host} placeholder="smtp.gmail.com"
-                onChange={(e) => setHost(e.target.value)} />
+          <div className="grid-2">
+            <div className="field">
+              <label htmlFor="se-host">SMTP host</label>
+              <input
+                id="se-host"
+                value={host}
+                autoComplete="off"
+                onChange={(e) => setHost(e.target.value)}
+              />
             </div>
-            <div>
-              <label style={authLabel} htmlFor="se-port">Port</label>
-              <input id="se-port" style={authInput} value={port} inputMode="numeric"
-                onChange={(e) => setPort(e.target.value)} />
-            </div>
-          </div>
-          <div style={{ ...row2, marginBottom: 16 }}>
-            <div>
-              <label style={authLabel} htmlFor="se-user">SMTP username</label>
-              <input id="se-user" style={authInput} value={smtpUser} placeholder="you@example.com"
-                onChange={(e) => setSmtpUser(e.target.value)} />
-            </div>
-            <div>
-              <label style={authLabel} htmlFor="se-from">From address</label>
-              <input id="se-from" style={authInput} value={from} placeholder={email || "reports@example.com"}
-                onChange={(e) => setFrom(e.target.value)} />
+            <div className="field">
+              <label htmlFor="se-port">Port</label>
+              <input
+                id="se-port"
+                value={port}
+                inputMode="numeric"
+                autoComplete="off"
+                onChange={(e) => setPort(e.target.value)}
+              />
             </div>
           </div>
-          <div style={{ marginBottom: 22 }}>
-            <label style={authLabel} htmlFor="se-pass">SMTP password</label>
-            <input id="se-pass" style={authInput} type="password" value={smtpPass}
-              placeholder="App password" onChange={(e) => setSmtpPass(e.target.value)} />
+          <div className="grid-2">
+            <div className="field">
+              <label htmlFor="se-user">SMTP username</label>
+              <input
+                id="se-user"
+                value={smtpUser}
+                autoComplete="off"
+                onChange={(e) => setSmtpUser(e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="se-from">From address</label>
+              <input
+                id="se-from"
+                value={from}
+                autoComplete="off"
+                onChange={(e) => setFrom(e.target.value)}
+              />
+            </div>
           </div>
-          {err && <p style={{ color: "#f87171", fontSize: 12.5, margin: "0 0 14px" }}>{err}</p>}
-          {testOk && <p style={{ color: "#a3c585", fontSize: 12.5, margin: "0 0 14px" }}>{testOk}</p>}
+          <PasswordField
+            label="SMTP password"
+            value={smtpPass}
+            onChange={setSmtpPass}
+            reveal={reveal}
+            onToggleReveal={() => setReveal((r) => !r)}
+            autoComplete="off"
+          />
+          {err && (
+            <p role="alert" className="field-error" style={{ marginBottom: 14 }}>
+              {err}
+            </p>
+          )}
+          {testOk && (
+            <p role="status" style={{ color: "var(--auth-accent)", fontSize: 12, margin: "0 0 14px" }}>
+              {testOk}
+            </p>
+          )}
           <div style={{ display: "flex", gap: 10 }}>
-            <button style={back} onClick={() => setStep(0)}>Back</button>
-            <button style={{ ...back, flex: 1, opacity: !host || busy ? 0.55 : 1 }}
-              disabled={!host || busy} onClick={testEmail}>
+            <button type="button" className="btn-auth-ghost" onClick={() => setStep(0)}>
+              Back
+            </button>
+            <button
+              type="button"
+              className="btn-auth-ghost"
+              aria-disabled={!host || busy}
+              onClick={(e) => {
+                if (!host || busy) e.preventDefault();
+                else testEmail();
+              }}
+            >
               {busy ? "Sending…" : "Test"}
             </button>
-            <button style={{ ...authPrimary, width: "auto", flex: 1.4 }} onClick={() => setStep(2)}>
+            <button type="button" className="btn-auth" style={{ width: "auto", flex: 1.4 }} onClick={() => setStep(2)}>
               Continue
             </button>
           </div>
-          <button style={skipBtn} onClick={skip}>Skip this step</button>
+          {SHOW_SKIP && (
+            <button type="button" className="auth-skip" onClick={skip}>
+              Skip this step (dev only)
+            </button>
+          )}
         </>
       )}
 
       {step === 2 && (
         <>
-          <h1 style={{ margin: "0 0 8px", fontSize: 19, fontWeight: 500 }}>Ready to trade</h1>
-          <p style={{ margin: "0 0 28px", fontSize: 12.5, color: "#8a8a8a", lineHeight: 1.6 }}>
-            {name || "Owner"}{email ? ` · ${email}` : ""}{host ? ` · mail via ${host}` : " · email skipped, configure later in Settings"}
+          <p className="auth-sub" style={{ marginTop: 0 }}>
+            {name || "Owner"}
+            {email ? ` · ${email}` : ""}
+            {host ? ` · mail via ${host}` : " · email skipped, configure later in Settings"}
           </p>
-          <div style={{
-            background: "#141414", border: "1px solid #2e2e2e", borderRadius: 8,
-            padding: "14px", fontSize: 12.5, marginBottom: 22, lineHeight: 1.6, color: "#d4d4d4",
-          }}>
+          <div className="auth-note">
             Mode starts at <b>PAPER</b>. Live trading needs step-up auth + the promotion checklist.
           </div>
           <div style={{ display: "flex", gap: 10 }}>
-            <button style={back} onClick={() => setStep(1)}>Back</button>
-            <button style={{ ...authPrimary, width: "auto", flex: 1 }} onClick={finish} disabled={busy}>
+            <button type="button" className="btn-auth-ghost" onClick={() => setStep(1)}>
+              Back
+            </button>
+            <button
+              type="button"
+              className="btn-auth"
+              style={{ width: "auto", flex: 1 }}
+              aria-disabled={busy}
+              onClick={finish}
+            >
               {busy ? "Creating…" : "Finish"}
             </button>
           </div>
-          {err && step === 2 && <p style={{ color: "#f87171", fontSize: 12.5, margin: "14px 0 0" }}>{err}</p>}
-          <p style={{ ...authMuted, textAlign: "center", margin: "26px 0 0" }}>
-            Already have an account? <Link to="/login" style={authLink}>Sign in</Link>
-          </p>
+          {err && (
+            <p role="alert" className="field-error" style={{ marginTop: 14 }}>
+              {err}
+            </p>
+          )}
         </>
       )}
 
       {step === 3 && (
         <>
-          <h1 style={{ margin: "0 0 8px", fontSize: 19, fontWeight: 500 }}>Save your authenticator secret</h1>
-          <p style={{ margin: "0 0 28px", fontSize: 12.5, color: "#8a8a8a", lineHeight: 1.6 }}>
-            Shown once. Add it to your authenticator app now — login requires a TOTP code every time.
-          </p>
-          <div style={{
-            background: "#141414", border: "1px dashed #c9d6a3", borderRadius: 8,
-            padding: "16px", fontSize: 17, letterSpacing: "0.12em", textAlign: "center",
-            marginBottom: 22, userSelect: "all",
-          }}>
-            {totpSecret}
-          </div>
-          <button style={authPrimary} onClick={() => nav("/login")}>
+          <div className="totp-secret">{totpSecret}</div>
+          <button type="button" className="btn-auth" onClick={() => nav("/login")}>
             Saved — Sign in
           </button>
         </>

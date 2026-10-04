@@ -1,76 +1,209 @@
+import { useRef, useState } from "react";
+import { Money } from "../ui/Money";
+import { fmtINR } from "../../utils/fmt";
+import type { Position } from "../../api/client";
 import { E, eicons } from "./eicons";
 
-/* Middle-column blocks: gradient hero card, account rows, limit rows
-   with donut gauges. Currency formatting is en-IN. */
+/* Rail + page blocks. No invented numbers: every figure comes from props.
+   Missing backend fields are hidden with a TODO(backend) marker. */
 
-export const inr0 = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
-
-export function HeroCard({ label, amount, mode, sub }: {
-  label: string; amount: string; mode: string; sub: string;
+export function PnLCard({ net, realized, unrealized, charges, gross }: {
+  net: number;
+  realized?: number;
+  unrealized?: number;
+  charges: number;
+  gross?: number;
 }) {
+  // TODO(backend): realized/unrealized split — /api/pnl exposes gross only.
+  const split = realized !== undefined && unrealized !== undefined;
   return (
-    <div className="efer-hero">
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontWeight: 800, letterSpacing: ".1em", fontSize: 13 }}>◈ MONOLITH</span>
-        <span style={{ fontSize: 11.5, background: "rgba(255,255,255,.2)", borderRadius: 7, padding: "3px 9px" }}>
-          {mode}
+    <section className="pnl" aria-label="Today's P&L">
+      <div className="pnl-brand">
+        <span>◈ MONOLITH</span>
+      </div>
+      <p className="cap">
+        Net P&L today{" "}
+        <span
+          className="info"
+          title="Net = Realized + Unrealized − Charges"
+          tabIndex={0}
+          aria-label="Formula: Realized plus Unrealized minus Charges"
+        >
+          ⓘ
         </span>
-      </div>
-      <div style={{ marginTop: 34, fontSize: 12, opacity: 0.75 }}>{label}</div>
-      <div style={{ display: "flex", alignItems: "baseline", marginTop: 2 }}>
-        <span className="amt">{amount}</span>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", marginTop: 10, fontSize: 12.5, opacity: 0.9 }}>
-        <span>{sub}</span>
-        <span style={{ marginLeft: "auto", fontSize: 15 }}>◈</span>
-      </div>
-    </div>
+      </p>
+      <Money value={net} sign colorize arrow size="hero" />
+      <dl>
+        {split ? (
+          <>
+            <div>
+              <dt>Realized</dt>
+              <dd>
+                <Money value={realized as number} sign colorize />
+              </dd>
+            </div>
+            <div>
+              <dt>Unrealized</dt>
+              <dd>
+                <Money value={unrealized as number} sign colorize />
+              </dd>
+            </div>
+          </>
+        ) : (
+          gross !== undefined && (
+            <div>
+              <dt>Gross</dt>
+              <dd>
+                <Money value={gross} sign colorize />
+              </dd>
+            </div>
+          )
+        )}
+        <div>
+          <dt>Charges</dt>
+          <dd>
+            <Money value={-charges} />
+          </dd>
+        </div>
+      </dl>
+    </section>
   );
 }
 
-export function AcctRow({ amount, ccy, tail, badge }: {
-  amount: string; ccy: string; tail: string; badge?: number;
+export interface RowPosition {
+  symbol: string;
+  side: "LONG" | "SHORT";
+  qty: number;
+  avg: number;
+  ltp: number;
+  pnl: number;
+}
+
+export function toRowPosition(p: Position): RowPosition {
+  return {
+    symbol: p.symbol,
+    side: p.qty < 0 ? "SHORT" : "LONG",
+    qty: Math.abs(p.qty),
+    avg: p.avgPrice,
+    ltp: p.ltp,
+    pnl: p.pnl,
+  };
+}
+
+export function PositionRow({ position: p, onSelect }: {
+  position: RowPosition;
+  onSelect: () => void;
 }) {
   return (
-    <div className="efer-acct" style={{ position: "relative" }}>
-      <b style={{ fontVariantNumeric: "tabular-nums" }}>{amount}</b>
-      <span className="ccy">{ccy}</span>
-      <span className="tail">{tail}</span>
-      {badge !== undefined && badge > 0 && (
-        <span className="efer-dot-badge" style={{ position: "absolute", top: -8, right: -4 }}>{badge}</span>
-      )}
-    </div>
+    <button
+      className="pos-row"
+      onClick={onSelect}
+      aria-label={`${p.symbol} ${p.side}, quantity ${p.qty}, P&L ${fmtINR(p.pnl)}. Open position detail.`}
+    >
+      <span className="sym">
+        {p.symbol} <em className={`side side-${p.side.toLowerCase()}`}>{p.side}</em>
+      </span>
+      <span className="num tnum">
+        <small>Qty</small>
+        {p.qty}
+      </span>
+      <span className="num tnum">
+        <small>Avg</small>
+        {fmtINR(p.avg, 2)}
+      </span>
+      <span className="num tnum">
+        <small>LTP</small>
+        {fmtINR(p.ltp, 2)}
+      </span>
+      <span className="num tnum">
+        <Money value={p.pnl} sign colorize arrow />
+        {/* TODO(backend): pnlPct — /api/positions exposes absolute P&L only. */}
+      </span>
+    </button>
   );
 }
 
-function Gauge({ pct, dark }: { pct: number; dark?: boolean }) {
-  const r = 15.5;
-  const c = 2 * Math.PI * r;
-  const off = c * (1 - Math.min(1, Math.max(0, pct)));
-  return (
-    <svg width="44" height="44" viewBox="0 0 36 36">
-      <circle cx="18" cy="18" r={r} fill="none" stroke={dark ? "#3a3a56" : "#e4e4ea"} strokeWidth="4" />
-      <circle cx="18" cy="18" r={r} fill="none" stroke={dark ? "#fff" : "#2b2b4a"} strokeWidth="4"
-        strokeDasharray={c.toFixed(1)} strokeDashoffset={off.toFixed(1)}
-        strokeLinecap="round" transform="rotate(-90 18 18)" />
-      <circle cx="18" cy="18" r="4.5" fill={dark ? "#fff" : "#2b2b4a"} />
-    </svg>
-  );
-}
-
-export function LimitRow({ title, used, total, dark }: {
-  title: string; used: string; total: string; dark?: boolean;
+export function PositionsList({ positions, loading, error, onRetry, emptyText }: {
+  positions: Position[];
+  loading?: boolean;
+  error?: Error | null;
+  onRetry?: () => void;
+  emptyText?: string;
 }) {
-  const pct = parseFloat(used.replace(/[^0-9.]/g, "")) / Math.max(1, parseFloat(total.replace(/[^0-9.]/g, "")));
-  return (
-    <div className="efer-limit">
-      <Gauge pct={Number.isFinite(pct) ? pct : 0} dark={dark} />
-      <div>
-        <div className="t">{title}</div>
-        <div className="v">{used} / {total}</div>
+  const [selected, setSelected] = useState<RowPosition | null>(null);
+  const ref = useRef<HTMLDialogElement>(null);
+
+  if (loading) {
+    return (
+      <div className="pos-list" aria-label="Loading positions">
+        {[0, 1].map((i) => (
+          <div key={i} className="skeleton" style={{ height: 64 }} />
+        ))}
       </div>
-      <span className="chev">›</span>
-    </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="empty" role="alert">
+        <h2>Couldn't load positions</h2>
+        <p>{error.message}</p>
+        {onRetry && (
+          <button className="act" onClick={onRetry}>
+            Retry
+          </button>
+        )}
+      </div>
+    );
+  }
+  if (positions.length === 0) {
+    return (
+      <div className="empty">
+        <h2>No open positions</h2>
+        {emptyText && <p>{emptyText}</p>}
+      </div>
+    );
+  }
+  return (
+    <>
+      <div className="pos-list">
+        {positions.map((p) => (
+          <PositionRow
+            key={p.symbol}
+            position={toRowPosition(p)}
+            onSelect={() => {
+              setSelected(toRowPosition(p));
+              ref.current?.showModal();
+            }}
+          />
+        ))}
+      </div>
+      <dialog ref={ref} className="kill-dialog" aria-labelledby="pos-title">
+        {selected && (
+          <>
+            <h2 id="pos-title">
+              {selected.symbol} <em className={`side side-${selected.side.toLowerCase()}`}>{selected.side}</em>
+            </h2>
+            <ul>
+              <li>Quantity: {selected.qty}</li>
+              <li>Average price: {fmtINR(selected.avg, 2)}</li>
+              <li>LTP: {fmtINR(selected.ltp, 2)}</li>
+              <li>
+                P&L: {fmtINR(selected.pnl)}
+              </li>
+            </ul>
+            <p style={{ fontSize: 12, color: "var(--text-2)" }}>
+              Full order history for this position is not exposed yet. TODO(backend):
+              position order timeline endpoint.
+            </p>
+            <div className="row">
+              <button autoFocus className="cancel" onClick={() => ref.current?.close()}>
+                Close
+              </button>
+            </div>
+          </>
+        )}
+      </dialog>
+    </>
   );
 }
 
@@ -82,7 +215,7 @@ export function ActivityItem({ icon, title, sub, amount, down }: {
       <span className="ic"><E d={eicons[icon]} size={20} /></span>
       <div>
         <div style={{ fontSize: 14, fontWeight: 600 }}>{title}</div>
-        <div style={{ fontSize: 12.5, color: "var(--efer-ink-2)" }}>{sub}</div>
+        <div style={{ fontSize: 12, color: "var(--efer-ink-2)" }}>{sub}</div>
       </div>
       <span className="amt" style={{ color: down ? "var(--efer-red)" : "var(--efer-ink)" }}>{amount}</span>
     </div>

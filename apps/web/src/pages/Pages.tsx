@@ -1,16 +1,15 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/mock";
-import type { Proposal } from "../api/client";
+import type { Position, Proposal } from "../api/client";
 import { PageHead } from "../shell/Shell";
+import { Tabs } from "../components/ui/Tabs";
+import { EmptyState, KpiSkeleton, nextEod } from "../components/ui/EmptyState";
+import { PositionsList } from "../components/efer/Blocks";
+import { fmtINR } from "../utils/fmt";
 
 export function Empty({ what, next }: { glyph?: string; what: string; next: string }) {
-  return (
-    <div style={{ background: "var(--efer-soft)", borderRadius: 14, padding: "34px 22px", textAlign: "center" }}>
-      <b style={{ fontSize: 14 }}>{what}</b>
-      <p style={{ fontSize: 13, color: "var(--efer-ink-2)", margin: "8px 0 0" }}>{next}</p>
-    </div>
-  );
+  return <EmptyState title={what} description={next} />;
 }
 
 function Table({ head, rows }: { head: string[]; rows: React.ReactNode }) {
@@ -38,7 +37,10 @@ export function Plan() {
           <tr key={r.id}>
             <td><b>{r.symbol}</b></td>
             <td style={{ color: r.side === "BUY" ? "var(--efer-green)" : "var(--efer-red)", fontWeight: 650 }}>{r.side}</td>
-            <td>{r.entry}</td><td>{r.stopLoss}</td><td>{r.target}</td><td>{r.confidence.toFixed(2)}</td>
+            <td className="tnum">{fmtINR(r.entry, 2)}</td>
+            <td className="tnum">{fmtINR(r.stopLoss, 2)}</td>
+            <td className="tnum">{fmtINR(r.target, 2)}</td>
+            <td className="tnum">{r.confidence.toFixed(2)}</td>
             <td>{r.reason}</td>
           </tr>
         ))}
@@ -49,14 +51,77 @@ export function Plan() {
 }
 
 export function Trading() {
+  const navigate = useNavigate();
+  const [tab, setTab] = useState("paper");
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const load = () => {
+    setLoading(true);
+    setError(null);
+    api
+      .getPositions()
+      .then((p) => {
+        setPositions(p);
+        setLoading(false);
+      })
+      .catch((e) => {
+        setError(e instanceof Error ? e : new Error("Failed to load."));
+        setLoading(false);
+      });
+  };
+  useEffect(load, []);
   return (
     <>
       <PageHead
         title="Trading"
-        sub="Paper / Live tabs · approvals · order events."
+        sub="Orders placed from approved proposals."
         right={<Link to="/plan"><button className="efer-pill-btn">Review proposals</button></Link>}
       />
-      <Empty what="Paper session quiet" next="Approved proposals flow here with idempotency keys and fill states once the worker runs. Live unlocks after the promotion checklist." />
+      <Tabs
+        label="Trading mode"
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { id: "paper", label: "Paper" },
+          {
+            id: "live",
+            label: "Live",
+            locked: true,
+            hint: "Live unlocks after the promotion checklist — see Risk & Limits",
+          },
+        ]}
+      />
+      <div style={{ marginTop: 16 }}>
+        {tab === "live" ? (
+          <EmptyState
+            title="Live trading is locked"
+            description="Complete the promotion checklist to unlock live orders."
+            action={{ label: "View promotion checklist", onClick: () => navigate("/risk") }}
+          />
+        ) : (
+          <>
+            <h2 style={{ fontSize: 16, margin: "4px 0 12px" }}>Open positions</h2>
+            <PositionsList
+              positions={positions}
+              loading={loading}
+              error={error}
+              onRetry={load}
+              emptyText="No open positions right now."
+            />
+            <h2 style={{ fontSize: 16, margin: "20px 0 12px" }}>Today&apos;s orders</h2>
+            {/* TODO(backend): today's orders endpoint — scoped empty state only. */}
+            <EmptyState
+              title="No orders today"
+              description={
+                positions.length > 0
+                  ? `${positions.length} open position${positions.length === 1 ? "" : "s"} carried over. Approved proposals appear here as orders.`
+                  : "Approved proposals appear here as orders."
+              }
+            />
+          </>
+        )}
+      </div>
     </>
   );
 }
@@ -97,14 +162,72 @@ export function Performance() {
 }
 
 export function Reports() {
+  const [tab, setTab] = useState("eod");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const range = from || to ? `${from || "…"} → ${to || "…"}` : "all dates";
   return (
     <>
       <PageHead
         title="Reports"
         sub="EOD / weekly / monthly snapshots + trades CSV."
-        right={<button className="efer-pill-btn">Export CSV</button>}
+        right={
+          <button
+            className="efer-pill-btn"
+            disabled
+            title="Nothing to export yet"
+            aria-disabled="true"
+          >
+            Export CSV
+          </button>
+        }
       />
-      <Empty what="No reports yet" next="The 16:30 EOD job produces the first report: gross/charges/net, trades, limit use, movers." />
+      <Tabs
+        label="Report type"
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { id: "eod", label: "EOD" },
+          { id: "weekly", label: "Weekly" },
+          { id: "monthly", label: "Monthly" },
+        ]}
+      />
+      <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
+        <label style={{ fontSize: 12, color: "var(--text-2)" }}>
+          From{" "}
+          <input
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            style={{ fontFamily: "inherit", fontSize: 13 }}
+          />
+        </label>
+        <label style={{ fontSize: 12, color: "var(--text-2)" }}>
+          To{" "}
+          <input
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            style={{ fontFamily: "inherit", fontSize: 13 }}
+          />
+        </label>
+      </div>
+      <div style={{ marginTop: 14 }}>
+        <EmptyState
+          title={tab === "eod" ? "No reports yet" : `No ${tab} reports in range`}
+          description={
+            tab === "eod"
+              ? `The 16:30 IST job produces the first report: gross/charges/net, trades, limit use, movers. Showing ${range}.`
+              : `Nothing filed for ${range}. Weekly and monthly reports start after the first EOD run.`
+          }
+          nextRun={tab === "eod" ? nextEod() : undefined}
+          preview={
+            <KpiSkeleton
+              labels={["Gross", "Charges", "Net", "Trades", "Win rate", "Limit use"]}
+            />
+          }
+        />
+      </div>
     </>
   );
 }

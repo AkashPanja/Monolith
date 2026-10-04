@@ -1,16 +1,23 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { AuthShell, authInput, authLabel, authLink, authMuted, authPrimary } from "../components/AuthShell";
+import { AuthShell } from "../components/AuthShell";
 import { mockApi } from "../api/mock";
 
 export function Forgot() {
   const [email, setEmail] = useState("");
+  const [touched, setTouched] = useState(false);
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
+  const emailErr =
+    touched && !/.+@.+\..+/.test(email) ? "Enter a valid email address." : "";
+  const formOk = /.+@.+\..+/.test(email);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setTouched(true);
+    if (!formOk || busy) return;
     setBusy(true);
     setErr("");
     try {
@@ -24,38 +31,68 @@ export function Forgot() {
   };
 
   return (
-    <AuthShell tagline={["Locked out?", "Let's get you back in."]}>
-      <h1 style={{ margin: "0 0 8px", fontSize: 19, fontWeight: 500 }}>Reset your password</h1>
-      <p style={{ margin: "0 0 28px", fontSize: 12.5, color: "#8a8a8a", lineHeight: 1.6 }}>
-        Enter your account email and we'll send a reset link.
-      </p>
+    <AuthShell
+      title="Reset your password"
+      subtitle="Enter your account email and we'll send a reset link."
+      asideCaption="Locked out? Let's get you back in."
+      footer={
+        <p className="auth-hint" style={{ textAlign: "center", marginTop: 26 }}>
+          <Link to="/login" style={{ color: "#e7e7e7" }}>
+            Back to sign in
+          </Link>
+        </p>
+      }
+    >
       {sent ? (
-        <>
-          <div style={{
-            background: "#12240f", border: "1px solid #2c4a22", borderRadius: 8,
-            padding: "13px 14px", fontSize: 12.5, marginBottom: 22, lineHeight: 1.6,
-          }}>
-            If an account exists for <b>{email}</b>, a reset link is on its way.
-          </div>
-          <p style={{ ...authMuted, textAlign: "center", margin: 0 }}>
-            <Link to="/login" style={authLink}>Back to sign in</Link>
-          </p>
-        </>
+        <div
+          role="status"
+          style={{
+            background: "#12240f",
+            border: "1px solid #2c4a22",
+            borderRadius: 8,
+            padding: "13px 14px",
+            fontSize: 14,
+            lineHeight: 1.6,
+          }}
+        >
+          If an account exists for <b>{email}</b>, a reset link is on its way.
+        </div>
       ) : (
-        <form onSubmit={submit}>
-          <div style={{ marginBottom: 22 }}>
-            <label style={authLabel} htmlFor="email">Email address *</label>
-            <input id="email" style={authInput} type="email" value={email}
-              placeholder="e.g. owner@example.com" autoComplete="email"
-              onChange={(e) => setEmail(e.target.value)} />
+        <form onSubmit={submit} noValidate>
+          <div className="field">
+            <label htmlFor="forgot-email">Email address</label>
+            <input
+              id="forgot-email"
+              type="email"
+              value={email}
+              autoComplete="email"
+              aria-invalid={!!emailErr}
+              aria-describedby={emailErr ? "forgot-email-err" : undefined}
+              onChange={(e) => setEmail(e.target.value)}
+              onBlur={() => setTouched(true)}
+            />
+            {emailErr && (
+              <p role="alert" id="forgot-email-err" className="field-error">
+                {emailErr}
+              </p>
+            )}
           </div>
-          {err && <p style={{ color: "#f87171", fontSize: 12.5, margin: "0 0 14px" }}>{err}</p>}
-          <button style={{ ...authPrimary, opacity: !email || busy ? 0.55 : 1 }} disabled={busy || !email}>
+          {err && (
+            <p role="alert" className="field-error" style={{ marginBottom: 14 }}>
+              {err}
+            </p>
+          )}
+          <button
+            type="submit"
+            className="btn-auth"
+            aria-disabled={!formOk || busy}
+            onClick={(e) => {
+              if (!formOk) e.preventDefault();
+            }}
+          >
             {busy ? "Sending…" : "Send reset link"}
           </button>
-          <p style={{ ...authMuted, textAlign: "center", margin: "26px 0 0" }}>
-            <Link to="/login" style={authLink}>Back to sign in</Link>
-          </p>
+          {!formOk && <p className="auth-hint">Enter your account email to continue</p>}
         </form>
       )}
     </AuthShell>

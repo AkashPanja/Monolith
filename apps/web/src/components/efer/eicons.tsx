@@ -26,4 +26,7 @@ export const eicons = {
   down: "M12 5v14M6 13l6 6 6-6",
   card: "M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 10h18",
   check: "M4 12.5l5 5L20 6.5",
+  clipboardCheck: "M9 4h6v3H9zM6 6H5a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-1M9 13.5l2 2 4-4.5",
+  fileChart: "M6 3h8l4 4v14H6zM14 3v4h4M9 17v-3M12 17V9M15 17v-5",
+  activity: "M3 12h4l3 8 4-16 3 8h4",
 };
