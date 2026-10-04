@@ -43,4 +43,6 @@ export interface ApiClient {
   getPositions(): Promise<Position[]>;
   getProposals(): Promise<Proposal[]>;
   kill(reason: string): Promise<void>;
+  requestPasswordReset(email: string): Promise<void>;
+  sendTestEmail(cfg: { host: string; port: number; from: string; to: string }): Promise<void>;
 }

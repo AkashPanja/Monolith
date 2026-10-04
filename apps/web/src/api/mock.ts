@@ -52,6 +52,15 @@ export const mockApi: ApiClient = {
     await wait(300);
     if (!reason) throw new Error("Reason required.");
   },
+  async requestPasswordReset(email: string) {
+    await wait(400);
+    if (!/.+@.+\..+/.test(email)) throw new Error("Enter a valid email address.");
+  },
+  async sendTestEmail(cfg: { host: string; port: number; from: string; to: string }) {
+    await wait(600);
+    if (!cfg.host) throw new Error("SMTP host is required.");
+    if (!cfg.to || !/.+@.+\..+/.test(cfg.to)) throw new Error("Create the user first so we know where to send the test.");
+  },
 };
 
 export const api: ApiClient =
