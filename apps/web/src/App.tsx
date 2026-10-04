@@ -1,0 +1,38 @@
+import { Navigate, Route, Routes } from "react-router-dom";
+import { useAuth } from "./auth/AuthContext";
+import { Shell } from "./shell/Shell";
+import { Login } from "./pages/Login";
+import { Audit, Home, Journal, Performance, Plan, Reports, Risk, Settings, Trading } from "./pages/Pages";
+import type { JSX } from "react";
+
+function Guard({ children }: { children: JSX.Element }) {
+  const { token } = useAuth();
+  return token ? children : <Navigate to="/login" replace />;
+}
+
+export function App() {
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route
+        path="/"
+        element={
+          <Guard>
+            <Shell />
+          </Guard>
+        }
+      >
+        <Route index element={<Home />} />
+        <Route path="plan" element={<Plan />} />
+        <Route path="trading" element={<Trading />} />
+        <Route path="journal" element={<Journal />} />
+        <Route path="performance" element={<Performance />} />
+        <Route path="reports" element={<Reports />} />
+        <Route path="risk" element={<Risk />} />
+        <Route path="settings" element={<Settings />} />
+        <Route path="audit" element={<Audit />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
