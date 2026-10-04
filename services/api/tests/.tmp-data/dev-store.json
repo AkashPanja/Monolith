@@ -2,8 +2,8 @@
   "user": {
     "username": "owner",
     "email": "o@example.com",
-    "pw": "scrypt$14$8$1$6831af084f9064d2584b1b4b7ef1394b$4d8230bcf6f248d4868e1342ca84982f4b8daa1c0660057c6c221a6edf6b57df",
-    "totp_secret": "GWUAXUGPINRPZAPF7LMR7DZM7IH2DUZ7"
+    "pw": "scrypt$14$8$1$950ad01c452b4316666cfb22c62167a9$2f758feb670a85fc2f199d0fb83fdbc1607820980e8859ddd73f06dd02177e45",
+    "totp_secret": "J7Z3XGI2FL54G6MXY5SSGDVGUKI5TPIM"
   },
   "smtp": {
     "host": "smtp.gmail.com",
