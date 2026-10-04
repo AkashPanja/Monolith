@@ -1,19 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/mock";
 import type { Position, Proposal } from "../api/client";
-import { ContentHead } from "../shell/Shell";
-import { DashSearch, Hero, SoftCard, Tabs } from "../components/neo/Dash";
-import { inr } from "../components/CountUp";
+import { PageHead } from "../shell/Shell";
+import { ActivityItem, MiniChart, inr0 } from "../components/efer/Blocks";
+import { E, eicons } from "../components/efer/eicons";
 
-type Tab = "Positions" | "Proposals" | "Orders";
+const TILE_COLORS = ["#2b2b4a", "#6c5ce7", "#e05757", "#3fa66a"];
 
 export function Dashboard() {
   const [pnl, setPnl] = useState({ gross: 0, charges: 0, net: 0 });
   const [positions, setPositions] = useState<Position[]>([]);
   const [proposals, setProposals] = useState<Proposal[]>([]);
-  const [tab, setTab] = useState<Tab>("Positions");
-  const [q, setQ] = useState("");
+  const [activeTile, setActiveTile] = useState("Square-off");
 
   useEffect(() => {
     api.getDayPnl().then(setPnl).catch(() => {});
@@ -21,82 +20,76 @@ export function Dashboard() {
     api.getProposals().then(setProposals).catch(() => {});
   }, []);
 
-  const up = pnl.net >= 0;
-  const rows = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    if (tab === "Positions") {
-      return positions
-        .filter((p) => !needle || p.symbol.toLowerCase().includes(needle))
-        .map((p) => ({
-          key: p.symbol,
-          cells: [p.symbol, String(p.qty), p.avgPrice.toFixed(1), p.ltp.toFixed(1),
-            `${p.pnl >= 0 ? "+" : ""}${p.pnl}`],
-          tone: p.pnl >= 0,
-        }));
-    }
-    return proposals
-      .filter((p) => !needle || p.symbol.toLowerCase().includes(needle))
-      .map((p) => ({
-        key: p.id,
-        cells: [p.symbol, p.side, String(p.entry), String(p.stopLoss), String(p.target), p.confidence.toFixed(2)],
-        tone: p.side === "BUY",
-      }));
-  }, [tab, q, positions, proposals]);
-
-  const head = tab === "Positions"
-    ? ["Symbol", "Qty", "Avg", "LTP", "P&L"]
-    : ["Symbol", "Side", "Entry", "SL", "Target", "Conf"];
+  const curve = [4, 5, 6, 5.2, 6.4, 6.1, 7.2, 6.6, 7.8, 8.4, 7.9, 8.8, 8.2, 9.0, 8.6, 9.4];
+  const tiles = [
+    { label: "Square-off", icon: "check" as const, to: "/trading" },
+    { label: "Approve", icon: "up" as const, to: "/plan" },
+    { label: "Kill", icon: "power" as const, to: "/risk" },
+    { label: "Reports", icon: "book" as const, to: "/reports" },
+  ];
 
   return (
     <>
-      <ContentHead title="Dashboard" sub="All your plans, positions and limits — intraday, MIS, paper-first." />
-      <Hero
-        label="Net P&L today"
-        value={inr(pnl.net)}
-        delta={`${up ? "+" : ""}${pnl.gross === 0 ? 0 : Math.round((pnl.net / Math.max(1, Math.abs(pnl.gross))) * 100)}% net of charges`}
-        deltaDown={!up}
-        action={
-          <Link to="/reports" className="neo-link">
-            See Report <span aria-hidden>→</span>
+      <PageHead title="Quick actions" sub="Intraday controls — MIS square-off 15:10." />
+      <div className="efer-tiles">
+        {tiles.map((t, i) => (
+          <Link key={t.label} to={t.to} style={{ textDecoration: "none" }}>
+            <button className={`efer-tile${activeTile === t.label ? " active" : ""}`} onClick={() => setActiveTile(t.label)}>
+              <span className="av" style={{ background: TILE_COLORS[i % TILE_COLORS.length] }}>
+                <E d={eicons[t.icon]} size={20} />
+              </span>
+              {t.label}
+            </button>
           </Link>
-        }
-      />
-      <h2 style={{ margin: "22px 2px 0", fontSize: 21, fontWeight: 650 }}>Positions</h2>
-      <Tabs tabs={["Positions", "Proposals", "Orders"]} active={tab} onPick={(t) => setTab(t as Tab)} />
-      <DashSearch value={q} onChange={setQ} />
-      <div style={{ marginTop: 14 }}>
-        <SoftCard pad={8}>
-          {tab === "Orders" ? (
-            <p style={{ padding: "18px 14px", color: "var(--neo-ink-2)", fontSize: 13.5, margin: 0 }}>
-              No orders yet today. Approved proposals appear here with idempotency keys and fill states.
-            </p>
-          ) : (
-            <table className="dtable">
-              <thead>
-                <tr>{head.map((h) => <th key={h} style={h === head[head.length - 1] ? { textAlign: "right" } : undefined}>{h}</th>)}</tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.key}>
-                    {r.cells.map((c, i) => (
-                      <td
-                        key={i}
-                        className={i === 0 ? undefined : "num"}
-                        style={i === r.cells.length - 1 ? { color: r.tone ? "var(--neo-green)" : "var(--neo-red)", fontWeight: 650, textAlign: "right" } : undefined}
-                      >
-                        {i === 0 ? <b>{c}</b> : c}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-                {rows.length === 0 && (
-                  <tr><td colSpan={head.length} style={{ color: "var(--neo-ink-3)", fontSize: 13 }}>Nothing matches.</td></tr>
-                )}
-              </tbody>
-            </table>
-          )}
-        </SoftCard>
+        ))}
       </div>
+
+      <div className="efer-rowhead">
+        <h2 className="efer-h">Balance change <span style={{ fontSize: 13, fontWeight: 400, color: "var(--efer-ink-2)" }}>today</span></h2>
+        <Link to="/performance"><button className="efer-pill-btn">See my stat</button></Link>
+      </div>
+      <div style={{ position: "relative", marginBottom: 8 }}>
+        <span style={{
+          position: "absolute", left: "18%", top: -8, background: "#2b2b4a", color: "#fff",
+          fontSize: 12, fontWeight: 650, borderRadius: 8, padding: "4px 10px", zIndex: 1,
+        }}>
+          {inr0(pnl.net).replace("₹", "").replace(/,/g, ",")},00
+        </span>
+        <div style={{ paddingTop: 26 }}>
+          <MiniChart points={curve} mark={3} />
+        </div>
+        <div style={{ textAlign: "center", fontSize: 12, color: "var(--efer-ink-2)", marginTop: -6 }}>
+          <span style={{ background: "#f4f4f7", borderRadius: 6, padding: "2px 10px" }}>09:15 - Open</span>
+        </div>
+      </div>
+
+      <div className="efer-rowhead" style={{ marginTop: 24 }}>
+        <h2 className="efer-h">Recent activity</h2>
+        <Link to="/trading"><button className="efer-pill-btn">Show all</button></Link>
+      </div>
+      <div style={{ fontSize: 13, color: "var(--efer-ink)", fontWeight: 600, marginBottom: 4 }}>Today</div>
+      {positions.map((p) => (
+        <ActivityItem
+          key={p.symbol}
+          icon={p.pnl >= 0 ? "down" : "up"}
+          title={`${p.symbol} × ${p.qty}`}
+          sub={p.pnl >= 0 ? "Holding" : "Holding"}
+          amount={`${p.pnl >= 0 ? "+" : ""}${p.pnl} INR`}
+          down={p.pnl < 0}
+        />
+      ))}
+      {proposals.map((p) => (
+        <ActivityItem
+          key={p.id}
+          icon="send"
+          title={`${p.side} ${p.symbol}`}
+          sub="Proposed · awaiting gate"
+          amount={`SL ${p.stopLoss}`}
+        />
+      ))}
+      {positions.length === 0 && proposals.length === 0 && (
+        <p style={{ fontSize: 13, color: "var(--efer-ink-3)" }}>No activity yet today.</p>
+      )}
     </>
   );
 }
