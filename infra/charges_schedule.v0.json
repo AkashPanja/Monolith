@@ -1,0 +1,13 @@
+{
+  "version": "v0",
+  "note": "EVERY rate below is a placeholder. Verify against a real Fyers MIS cash-equity contract note in Sprint 3; 1% reconciliation tolerance blocks G2->G3. # VERIFY",
+  "segment": "NSE cash equity, MIS intraday",
+  "verify": true,
+  "brokerage": { "type": "per_order_cap", "flat_inr": 20.0, "pct": 0.0003, "note": "# VERIFY Fyers MIS cap" },
+  "stt": { "pct": 0.00025, "on": "sell_side_only", "note": "# VERIFY current STT" },
+  "exchange_txn": { "pct": 0.0000325, "on": "turnover", "note": "# VERIFY NSE slab" },
+  "sebi": { "pct": 0.000001, "on": "turnover", "note": "# VERIFY SEBI turnover fee" },
+  "gst": { "pct": 0.18, "on": ["brokerage", "exchange_txn", "sebi"], "note": "# VERIFY" },
+  "stamp": { "pct": 0.00003, "on": "buy_side_only", "note": "# VERIFY" },
+  "dp": { "flat_inr_per_isin_day": 0.0, "note": "MIS square-off has no delivery DP; CNC delivery 15.5+GST if ever enabled # VERIFY" }
+}

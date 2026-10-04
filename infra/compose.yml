@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: monolith
+      POSTGRES_USER: monolith
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U monolith"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ../services/api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://monolith:${POSTGRES_PASSWORD}@postgres:5432/monolith
+      MODE: ${MODE:-PAPER}
+    ports:
+      - "8000:8000"
+
+  worker:
+    build: ../services/worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  watchdog:
+    build: ../services/watchdog
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  notifier:
+    build: ../services/notifier
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build: ../apps/web
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
