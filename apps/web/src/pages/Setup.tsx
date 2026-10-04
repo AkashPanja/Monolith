@@ -1,7 +1,6 @@
 import { useState, type CSSProperties } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthShell, authInput, authPrimary } from "../components/AuthShell";
-import type { MascotMood } from "../components/Mascot";
 import { completeSetup, skipSetup } from "../setup/setupStore";
 import { mockApi } from "../api/mock";
 
@@ -34,7 +33,6 @@ function pwScore(pw: string): { label: string; color: string; width: string } {
 export function Setup() {
   const nav = useNavigate();
   const [step, setStep] = useState(0);
-  const [mood, setMood] = useState<MascotMood>("idle");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [testOk, setTestOk] = useState("");
@@ -70,12 +68,8 @@ export function Setup() {
     try {
       await mockApi.sendTestEmail({ host, port: Number(port), from: from || email, to: email });
       setTestOk("Test email sent — check the inbox.");
-      setMood("happy");
-      setTimeout(() => setMood("idle"), 1500);
     } catch (ex) {
       setErr(ex instanceof Error ? ex.message : "Send failed.");
-      setMood("error");
-      setTimeout(() => setMood("idle"), 1400);
     } finally {
       setBusy(false);
     }
@@ -88,7 +82,6 @@ export function Setup() {
     <AuthShell
       tagline={step === 0 ? ["Let's get you", "set up"] : step === 1 ? ["Where should", "reports go?"] : ["You're all", "set"]}
       activeDot={step}
-      mood={mood}
     >
       <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
         {steps.map((s, i) => (
@@ -131,7 +124,6 @@ export function Setup() {
             <input
               id="su-pw" style={authInput} type="password" value={password}
               onChange={(e) => setPassword(e.target.value)}
-              onFocus={() => setMood("shy")} onBlur={() => setMood("idle")}
               placeholder="Min. 8 characters"
             />
           </div>
@@ -174,8 +166,7 @@ export function Setup() {
             <label style={label} htmlFor="se-pass">SMTP password</label>
             <input
               id="se-pass" style={authInput} type="password" value={smtpPass}
-              onChange={(e) => setSmtpPass(e.target.value)}
-              onFocus={() => setMood("shy")} onBlur={() => setMood("idle")} placeholder="App password"
+              onChange={(e) => setSmtpPass(e.target.value)} placeholder="App password"
             />
           </div>
           <div style={{ marginBottom: 18 }}>

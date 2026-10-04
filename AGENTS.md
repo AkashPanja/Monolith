@@ -46,7 +46,7 @@ Stack: **FastAPI + React + Postgres 16** via Docker Compose. Full spec: `docs/at
 - Merge: Neka health-cards (status + limit meters) + Bryzos data-density (Plan/Trading tables) + Lerno clarity (rounded cards, whitespace, guided empty states).
 - Login: split screen, brand/mascot panel left, form right; soft gradient, glass card.
 - Motion: route transitions + card hover lift + P&L count-up + skeleton shimmer. Respect `prefers-reduced-motion`.
-- Mascot (required): SVG/Canvas bot following cursor via rAF pupils, idle blink, happy bounce on valid input, shy cover-eyes on password, shake on error. Pointer-events none, ~60fps, no layout shift.
+- Auth visual panel: animated market visual (candlesticks, drawing equity curve, ticker tape, PAPER/P&L chips) — SVG + CSS only, deterministic, reduced-motion safe. No mascot/character.
 - Shell: top bar (mode badge grey/blue/amber/red, auto-trade switch, KILL, health dots, P&L, limit meters) + pages: Home, Plan & Proposals, Trading (Paper/Live tabs), Journal, Performance, Reports, Risk & Limits, Settings, Audit & Health. Live = red banner; dangerous actions = typed confirm + step-up.
 
 ## Conventions

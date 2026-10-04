@@ -1,25 +1,26 @@
 import type { CSSProperties, ReactNode } from "react";
-import { Mascot, type MascotMood } from "./Mascot";
+import { MarketVisual } from "./MarketVisual";
 
-/* Dark auth card matching the reference: muted mauve backdrop, deep-navy
-   card, visual panel left (brand + tagline + dots), form panel right. */
+/* Dark auth card: muted mauve backdrop, deep-navy card, market-visual
+   panel left (brand + live chart + tagline + dots), form panel right. */
 
 const backdrop: CSSProperties = {
   minHeight: "100%",
   display: "grid",
   placeItems: "center",
   padding: 24,
-  background: "#6f6a86",
+  background: "radial-gradient(1200px 700px at 50% 120%, #57506f 0%, #6f6a86 55%, #7b7590 100%)",
 };
 
 const card: CSSProperties = {
   width: "100%",
-  maxWidth: 980,
+  maxWidth: 1020,
   background: "#201c30",
+  border: "1px solid rgba(255,255,255,.06)",
   borderRadius: 20,
   boxShadow: "0 30px 80px -20px rgba(0,0,0,.55)",
   display: "grid",
-  gridTemplateColumns: "1.05fr 1fr",
+  gridTemplateColumns: "1.1fr 1fr",
   overflow: "hidden",
   color: "#eceaf4",
 };
@@ -31,9 +32,9 @@ const visual: CSSProperties = {
   display: "flex",
   flexDirection: "column",
   background:
-    "radial-gradient(120% 90% at 80% 0%, rgba(124,93,250,.55) 0%, transparent 55%)," +
-    "radial-gradient(90% 70% at 15% 90%, rgba(20,10,40,.9) 0%, transparent 60%)," +
-    "linear-gradient(180deg, #4b3f8f 0%, #2c2350 45%, #171222 100%)",
+    "radial-gradient(120% 90% at 80% 0%, rgba(124,93,250,.5) 0%, transparent 55%)," +
+    "radial-gradient(90% 70% at 15% 90%, rgba(16,185,129,.14) 0%, transparent 60%)," +
+    "linear-gradient(180deg, #342a5e 0%, #241d44 45%, #171222 100%)",
   position: "relative",
   overflow: "hidden",
 };
@@ -51,7 +52,7 @@ export const authInput: CSSProperties = {
 
 export const authPrimary: CSSProperties = {
   width: "100%",
-  background: "#6c5ce7",
+  background: "linear-gradient(180deg, #7c6cf5 0%, #6c5ce7 100%)",
   border: "none",
   borderRadius: 9,
   padding: 13,
@@ -59,25 +60,24 @@ export const authPrimary: CSSProperties = {
   fontWeight: 700,
   color: "#fff",
   cursor: "pointer",
+  boxShadow: "0 10px 24px -10px rgba(108,92,231,.7)",
 };
 
 export function AuthShell({
   tagline,
   activeDot = 0,
-  mood = "idle",
   children,
 }: {
   tagline: [string, string];
   activeDot?: number;
-  mood?: MascotMood;
   children: ReactNode;
 }) {
   return (
     <div style={backdrop}>
-      <style>{`@media (max-width: 860px) { .auth-card { grid-template-columns: 1fr !important; } .auth-visual { display: none; } }`}</style>
+      <style>{`@media (max-width: 880px) { .auth-card { grid-template-columns: 1fr !important; } .auth-visual { display: none; } }`}</style>
       <div style={card} className="auth-card">
         <div style={visual} className="auth-visual">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
             <span style={{ fontWeight: 800, letterSpacing: ".14em", fontSize: 17 }}>◆ MONOLITH</span>
             <span
               style={{
@@ -88,10 +88,8 @@ export function AuthShell({
               Paper-first trading →
             </span>
           </div>
-          <div style={{ margin: "auto", width: "100%", maxWidth: 250 }}>
-            <Mascot mood={mood} />
-          </div>
-          <div style={{ textAlign: "center", fontSize: 21, fontWeight: 650, lineHeight: 1.35 }}>
+          <MarketVisual />
+          <div style={{ textAlign: "center", fontSize: 21, fontWeight: 650, lineHeight: 1.35, marginTop: 18 }}>
             {tagline[0]},<br />{tagline[1]}
           </div>
           <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 18 }}>
